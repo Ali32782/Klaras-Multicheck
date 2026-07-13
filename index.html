@@ -98,36 +98,8 @@ document.getElementById('authBtn').onclick = function() {
   if (currentUser) {
     auth.signOut();
   } else {
-    // Create modal with Google and Apple options
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000';
-    modal.innerHTML = `
-      <div style="background:white;padding:30px;border-radius:12px;text-align:center;max-width:300px;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
-        <h2 style="margin-bottom:20px;color:#1C5B7A">Anmelden</h2>
-        <button id="googleBtn" style="width:100%;padding:12px;margin-bottom:10px;background:#4285F4;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">Mit Google anmelden</button>
-        <button id="appleBtn" style="width:100%;padding:12px;margin-bottom:10px;background:#000;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">Mit Apple anmelden</button>
-        <button id="cancelBtn" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer">Abbrechen</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    
-    document.getElementById('googleBtn').onclick = function() {
-      modal.remove();
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(e => alert('Google Login error: ' + e.message));
-    };
-    
-    document.getElementById('appleBtn').onclick = function() {
-      modal.remove();
-      const provider = new firebase.auth.OAuthProvider('apple.com');
-      provider.addScope('email');
-      provider.addScope('name');
-      auth.signInWithPopup(provider).catch(e => alert('Apple Login error: ' + e.message));
-    };
-    
-    document.getElementById('cancelBtn').onclick = function() {
-      modal.remove();
-    };
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => alert('Login error: ' + e.message));
   }
 };
 
@@ -164,7 +136,7 @@ const questionBank = {
     { q: 'Synonym für "groß"?', opts: ['riesig', 'klein', 'neu'], correct: 0 },
     { q: 'Gegenteil von "schnell"?', opts: ['langsam', 'schneller', 'alt'], correct: 0 },
     { q: 'Plural von "Haus"?', opts: ['Häuser', 'Hausen', 'Haus'], correct: 0 },
-    { q: 'Correct spelling?', opts: ['Freund', 'Freund', 'Freund'], correct: 0 },
+    { q: 'Richtige Schreibweise?', opts: ['Freund', 'Fründ', 'Freundt'], correct: 0 },
   ],
   english: [
     { q: '"big" auf Deutsch?', opts: ['groß', 'klein', 'neu'], correct: 0 },
@@ -253,7 +225,7 @@ function renderResult(app) {
   html += '<button class="btn" onclick="startGame(\'' + state.area + '\')">Nochmal</button>';
   html += '<button class="btn btn-secondary" onclick="state.screen=\'home\'; render();">Menü</button>';
   html += '</div>';
-  html += '<div class="info">Score saved' + (currentUser ? ' to Firebase' : ' locally') + '</div>';
+  html += '<div class="info">Score gespeichert' + (currentUser ? ' zu Firebase ✓' : ' lokal') + '</div>';
   html += '</div>';
   
   app.innerHTML = html;
