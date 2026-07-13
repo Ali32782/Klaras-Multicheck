@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klaras Fortschritt — Parent Dashboard</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+header { background: #1C5B7A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 24px; }
+header button { padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; cursor: pointer; font-size: 13px; }
+header button:hover { background: rgba(255,255,255,0.3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.card h3 { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.stat { font-size: 32px; font-weight: 700; color: #1C5B7A; margin-bottom: 4px; }
+.label { font-size: 13px; color: #999; }
+.chart-card { grid-column: 1 / -1; }
+.chart-wrap { position: relative; height: 300px; }
+.session-list { grid-column: 1 / -1; }
+.session-item { padding: 12px; border-left: 4px solid #1C5B7A; background: #f9f9f9; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.session-item .area { font-weight: 600; color: #1C5B7A; }
+.session-item .score { font-weight: 700; color: #2F8F5B; }
+.session-item .date { color: #999; font-size: 12px; }
+.login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 20px; }
+.btn-login { padding: 12px 24px; background: #1C5B7A; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+.btn-login:hover { background: #154458; }
+.stats-row { display: flex; gap: 12px; margin-top: 12px; }
+.mini-stat { flex: 1; text-align: center; padding: 8px; background: #f5f5f5; border-radius: 4px; }
+.mini-stat-val { font-size: 18px; font-weight: 700; color: #1C5B7A; }
+.mini-stat-lbl { font-size: 11px; color: #999; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDQrrpCybMqy0lBjdz2QnhN6_jQxsseNkA",
+  authDomain: "klaras-multicheck.firebaseapp.com",
+  projectId: "klaras-multicheck",
+  storageBucket: "klaras-multicheck.firebasestorage.app",
+  messagingSenderId: "545763031616",
+  appId: "1:545763031616:web:a07af0ac5a88d1be337da5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb = firebase.firestore();
+
+let currentUser = null;
+let klaraUid = null;
+let sessionsData = [];
+let chart = null;
+
+const app = document.getElementById("app");
+
+fbAuth.onAuthStateChanged(async user => {
+  currentUser = user;
+  const urlParams = new URLSearchParams(window.location.search);
+  klaraUid = urlParams.get("uid");
+  
+  if(!currentUser) {
+    showLogin();
+  } else if(!klaraUid || klaraUid === currentUser.uid) {
+    // Parent logt sich ein mit eigenem Account
+    showAccessDenied();
+  } else {
+    // Parent hat UID von Klara, jetzt Daten laden
+    await loadSessions();
+    renderDashboard();
+  }
+});
+
+function showLogin() {
+  app.innerHTML = `
+    <div class="login-screen">
+      <h1>Klaras Fortschritt</h1>
+      <p style="color:#999;font-size:14px">Parent-Dashboard</p>
+      <button class="btn-login" onclick="loginGoogle()">Mit Google anmelden</button>
+    </div>`;
+}
+
+function showAccessDenied() {
+  app.innerHTML = `
+    <div class="login-screen">
+      <h1>⚠️ Zugriff verweigert</h1>
+      <p style="color:#999;font-size:14px">Du kannst nur als Elternteil auf dieses Dashboard zugreifen.</p>
+      <p style="color:#999;font-size:13px;margin-top:20px">Klara sollte dir den Link mit ihrer UID geben.</p>
+      <button class="btn-login" onclick="fbAuth.signOut()">Logout</button>
+    </div>`;
+}
+
+function loginGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.signInWithPopup(provider).catch(e => alert("Login fehlgeschlagen: " + e.message));
+}
+
+async function loadSessions() {
+  try {
+    const snap = await fbDb.collection("users").doc(klaraUid).collection("sessions")
+      .orderBy("timestamp", "desc").limit(100).get();
+    sessionsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch(e) {
+    console.log("Error loading sessions:", e);
+    sessionsData = [];
+  }
+}
+
+function renderDashboard() {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const recent = sessionsData.filter(s => s.timestamp && s.timestamp.toDate() > thirtyDaysAgo);
+  
+  const totalScore = recent.reduce((sum, s) => sum + (s.score || 0), 0);
+  const totalCorrect = recent.reduce((sum, s) => sum + (s.correct || 0), 0);
+  const totalRounds = recent.reduce((sum, s) => sum + (s.total || 0), 0);
+  const avgSuccess = totalRounds > 0 ? Math.round(totalCorrect / totalRounds * 100) : 0;
+  const uniqueDays = new Set(recent.map(s => s.timestamp.toDate().toDateString())).size;
+  
+  // Scores pro Bereich
+  const byArea = {};
+  recent.forEach(s => {
+    if(!byArea[s.area]) byArea[s.area] = [];
+    byArea[s.area].push(s.score);
+  });
+  const areaStats = Object.entries(byArea).map(([area, scores]) => ({
+    area,
+    avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length),
+    max: Math.max(...scores),
+    count: scores.length
+  })).sort((a,b) => b.avg - a.avg);
+  
+  // Trend (letzte 10 Tage, tägl. Durchschnitt)
+  const trendDays = {};
+  recent.forEach(s => {
+    const day = s.timestamp.toDate().toDateString();
+    if(!trendDays[day]) trendDays[day] = [];
+    trendDays[day].push(s.score);
+  });
+  const trend = Object.entries(trendDays)
+    .sort((a,b) => new Date(b[0]) - new Date(a[0]))
+    .slice(0,10)
+    .reverse()
+    .map(([day, scores]) => ({day: day.split(' ')[0], avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}));
+  
+  app.innerHTML = `
+    <header>
+      <div>
+        <h1>Klaras Fortschritt</h1>
+        <p style="font-size:13px;opacity:0.8">Letzte 30 Tage</p>
+      </div>
+      <button onclick="fbAuth.signOut()">Logout</button>
+    </header>
+    
+    <div class="container">
+      <div class="grid">
+        <div class="card">
+          <h3>Trainings-Tage</h3>
+          <div class="stat">${uniqueDays}</div>
+          <div class="label">Tage mit Übung</div>
+        </div>
+        
+        <div class="card">
+          <h3>Durchschnitt</h3>
+          <div class="stat">${recent.length > 0 ? Math.round(totalScore / recent.length) : 0}</div>
+          <div class="label">Punkte pro Runde</div>
+        </div>
+        
+        <div class="card">
+          <h3>Erfolgsquote</h3>
+          <div class="stat">${avgSuccess}%</div>
+          <div class="label">${totalCorrect} / ${totalRounds} richtig</div>
+        </div>
+        
+        <div class="card">
+          <h3>Runden</h3>
+          <div class="stat">${recent.length}</div>
+          <div class="label">in 30 Tagen</div>
+        </div>
+      </div>
+      
+      <div class="grid">
+        <div class="card chart-card">
+          <h3>Punkte-Trend (letzte 10 Trainings-Tage)</h3>
+          <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid">
+        ${areaStats.map(a => `
+          <div class="card">
+            <h3>${a.area}</h3>
+            <div class="stat">${a.avg}</div>
+            <div class="stats-row">
+              <div class="mini-stat">
+                <div class="mini-stat-val">${a.max}</div>
+                <div class="mini-stat-lbl">Max</div>
+              </div>
+              <div class="mini-stat">
+                <div class="mini-stat-val">${a.count}</div>
+                <div class="mini-stat-lbl">Runden</div>
+              </div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="grid">
+        <div class="card session-list">
+          <h3>Letzte Runden</h3>
+          ${recent.slice(0,20).map(s => `
+            <div class="session-item">
+              <div>
+                <div class="area">${s.area || "?"}</div>
+                <div class="date">${new Date(s.timestamp.toDate()).toLocaleDateString('de-CH', {weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="score">${s.score} Pkt</div>
+                <div style="font-size:12px;color:#999">${s.correct}/${s.total} ✓</div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Chart zeichnen
+  setTimeout(() => {
+    const ctx = document.getElementById("trendChart");
+    if(ctx && trend.length > 0) {
+      if(chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: trend.map(t => t.day),
+          datasets: [{
+            label: 'Durchschnitt-Score',
+            data: trend.map(t => t.avg),
+            borderColor: '#1C5B7A',
+            backgroundColor: 'rgba(28, 91, 122, 0.1)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#1C5B7A'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: false, min: 0 } }
+        }
+      });
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>
