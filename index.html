@@ -869,13 +869,44 @@ function renderHome(){
       <p class="footHint">Jede Runde wird neu erzeugt — beliebig oft üben.<br>Drei Stufen: leicht · mittel · schwer. Aufgaben werden schwerer, wenn du viel richtig hast.</p>
     </div>`;
   
-  // Login-Handler
-  document.getElementById("authBtn").onclick = async () => {
+  // Login-Handler mit Apple + Google
+  const showAuthOptions = () => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999">
+        <div style="background:white;padding:20px;border-radius:8px;text-align:center;max-width:300px">
+          <h3 style="margin-bottom:16px">Anmelden</h3>
+          <button id="btnApple" style="width:100%;padding:10px;margin-bottom:8px;background:#000;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px">Mit Apple anmelden</button>
+          <button id="btnGoogle" style="width:100%;padding:10px;margin-bottom:8px;background:#4285F4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px">Mit Google anmelden</button>
+          <button id="btnCancel" style="width:100%;padding:10px;background:#ccc;border:none;border-radius:4px;cursor:pointer;font-size:14px">Abbrechen</button>
+        </div>
+      </div>`;
+    document.body.appendChild(div);
+    
+    document.getElementById("btnApple").onclick = async () => {
+      div.remove();
+      try {
+        const provider = new firebase.auth.OAuthProvider('apple.com');
+        provider.addScope('email');
+        provider.addScope('name');
+        await fbAuth.signInWithPopup(provider);
+      } catch(e) { alert("Apple-Login fehlgeschlagen: " + e.message); }
+    };
+    document.getElementById("btnGoogle").onclick = async () => {
+      div.remove();
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await fbAuth.signInWithPopup(provider);
+      } catch(e) { alert("Google-Login fehlgeschlagen: " + e.message); }
+    };
+    document.getElementById("btnCancel").onclick = () => div.remove();
+  };
+  
+  document.getElementById("authBtn").onclick = () => {
     if(fbUser) {
       fbAuth.signOut();
     } else {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      fbAuth.signInWithPopup(provider).catch(e => alert("Login fehler: " + e.message));
+      showAuthOptions();
     }
   };
   document.getElementById("dashBtn").onclick = () => {
