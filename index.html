@@ -1,418 +1,257 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#13233A" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Klaras Multicheck" />
-<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231C5B7A' width='180' height='180'/><text x='50%' y='50%' font-size='80' font-weight='bold' fill='white' text-anchor='middle' dy='.3em'>M</text></svg>" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Klaras Multicheck</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F5F2EC; color: #13233A; overflow: hidden; }
-#app { width: 100%; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.container { max-width: 900px; margin: 0 auto; padding: 0 16px; }
-header.hero { background: linear-gradient(135deg, #1C5B7A 0%, #154458 100%); color: white; padding: 40px 20px; text-align: center; position: relative; }
-header.hero .eyebrow { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; margin-bottom: 8px; }
-header.hero h1 { font-size: 32px; font-weight: 700; margin-bottom: 16px; }
-header.hero .sub { font-size: 15px; opacity: 0.95; line-height: 1.5; }
-.sectionLabel { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6E7480; margin: 24px 0 12px; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.areaCard, .modeCard { padding: 20px; background: white; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.areaCard:hover, .modeCard:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-.icon { display: inline-block; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; color: white; }
-.areaTitle { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
-.areaGo { font-size: 13px; color: #666; }
-.modeTitle { font-weight: 700; font-size: 16px; }
-.modeDesc { font-size: 13px; opacity: 0.8; }
-.icon2 { font-size: 32px; margin-bottom: 8px; }
-.bestTag { display: block; font-size: 12px; color: #2F8F5B; font-weight: 600; margin-top: 8px; }
-.pill { display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; }
-button { border: none; border-radius: 6px; cursor: pointer; font-size: 15px; transition: all 0.2s; }
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
-.back { padding: 8px 16px; background: white; color: #1C5B7A; font-weight: 600; }
-.pills { display: flex; gap: 8px; flex-wrap: wrap; }
-.qcard { background: white; padding: 24px; border-radius: 8px; margin-bottom: 20px; }
-.qkicker { font-size: 12px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; }
-.qtext { font-size: 18px; font-weight: 600; line-height: 1.4; }
-.opts, .optsGrid, .numGrid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.optsGrid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.opt { padding: 14px; background: white; border: 2px solid #DDD6C8; border-radius: 6px; text-align: left; font-size: 15px; font-weight: 500; transition: all 0.2s; }
+body { font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background: #f5f2ec; color: #333; }
+#app { max-width: 1000px; margin: 0 auto; padding: 20px; }
+header { background: #1C5B7A; color: white; padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+header h1 { font-size: 32px; margin-bottom: 10px; }
+.home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card { background: white; padding: 16px; border-radius: 8px; text-align: center; cursor: pointer; }
+.card:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.play-area { background: white; padding: 20px; border-radius: 8px; }
+.question { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+.options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+button { padding: 10px 20px; background: #1C5B7A; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+button:hover { background: #154458; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+.opt { padding: 12px; background: #f9f9f9; border: 2px solid #ddd; border-radius: 4px; text-align: left; cursor: pointer; }
 .opt:hover { border-color: #1C5B7A; }
-.opt.good { background: #DDF0E4; border-color: #2F8F5B; }
-.opt.bad { background: #F7DEDB; border-color: #C23B2E; }
-.numBtn { padding: 12px; background: white; border: 2px solid #DDD6C8; border-radius: 6px; font-weight: 600; font-size: 16px; }
-.numBtn.good { background: #DDF0E4; border-color: #2F8F5B; }
-.numBtn.bad { background: #F7DEDB; border-color: #C23B2E; }
-.next { padding: 12px 24px; background: #1C5B7A; color: white; font-weight: 600; margin-top: 12px; }
-.next:hover { background: #154458; }
-.levelRow { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.lvlDots { display: flex; gap: 6px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #DDD; }
-.dot.on { background: #E8553A; }
-.lvlLabel { font-size: 13px; color: #666; font-weight: 600; }
-.progressWrap { margin-bottom: 20px; }
-.bar { height: 4px; background: #DDD6C8; border-radius: 2px; overflow: hidden; }
-.barFill { height: 100%; transition: width 0.3s; }
-.progLabel { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-top: 8px; }
-.resultScreen { text-align: center; padding: 40px 20px; }
-.bigScore { font-size: 64px; font-weight: 800; color: #1C5B7A; margin: 20px 0; }
-.muted { color: #999; font-size: 14px; }
-.statRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
-.stat { padding: 16px; background: white; border-radius: 8px; }
-.statNum { font-size: 28px; font-weight: 700; color: #2F8F5B; }
-.statLbl { font-size: 12px; color: #999; margin-top: 4px; }
-.resultCard { background: linear-gradient(135deg, #DDF0E4 0%, #F5F2EC 100%); padding: 20px; border-radius: 8px; margin: 20px 0; }
-.btnRow { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
-.btnDark { padding: 12px 24px; background: #1C5B7A; color: white; font-weight: 600; flex: 1; max-width: 200px; }
-.btnLight { padding: 12px 24px; background: white; color: #1C5B7A; font-weight: 600; border: 2px solid #1C5B7A; flex: 1; max-width: 200px; }
-.installTip { background: #FBE7E1; border-left: 4px solid #E8553A; padding: 12px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-.installTip button { padding: 4px 8px; background: transparent; color: #E8553A; font-weight: 700; font-size: 20px; }
-.footHint { font-size: 13px; color: #999; margin-top: 20px; line-height: 1.6; }
-.timerBar { height: 3px; background: #DDD6C8; margin-bottom: 12px; }
-.timerFill { height: 100%; background: #E8553A; }
-.concGrid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 20px; background: #f9f9f9; border-radius: 6px; }
-.center { text-align: center; }
-#authStatus { font-size: 12px; color: #666; }
-#authBtn { padding: 8px 16px; background: #1C5B7A; color: white; font-size: 13px; }
-#dashBtn { padding: 8px 16px; background: #2F8F5B; color: white; font-size: 13px; }
+.opt.correct { background: #d4edda; border-color: #28a745; }
+.opt.wrong { background: #f8d7da; border-color: #dc3545; }
+.progress { margin-bottom: 20px; }
+.progress-bar { width: 100%; height: 4px; background: #ddd; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: #1C5B7A; }
+.score { font-size: 48px; font-weight: 700; text-align: center; color: #1C5B7A; margin: 40px 0; }
+.auth-ui { position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; align-items: center; }
+.auth-status { font-size: 12px; }
 </style>
 </head>
 <body>
+<div class="auth-ui">
+  <span class="auth-status" id="authStatus">Loading...</span>
+  <button id="authBtn">Login</button>
+</div>
 <div id="app"></div>
 
-<!-- FIREBASE SCRIPTS (ZUERST!) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+<!-- FIREBASE SCRIPTS -->
+<script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
 <script>
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyDQrrpCybMqy0lBjdz2QnhN6_jQxsseNkA",
-  authDomain: "klaras-multicheck.firebaseapp.com",
-  projectId: "klaras-multicheck",
-  storageBucket: "klaras-multicheck.firebasestorage.app",
-  messagingSenderId: "545763031616",
-  appId: "1:545763031616:web:a07af0ac5a88d1be337da5",
-  measurementId: "G-99Q371Y8W8"
-};
-
-// Init Firebase
-firebase.initializeApp(firebaseConfig);
-console.log("✅ Firebase initialized");
-
-window.fbAuth = firebase.auth();
-window.fbDb = firebase.firestore();
-window.fbUser = null;
-
-fbAuth.onAuthStateChanged(u => {
-  fbUser = u;
-  console.log("🔐 Auth state changed:", u ? "logged in" : "logged out");
+// Wait for Firebase to load
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
 });
-</script>
 
-<!-- HAUPT-APP (DANACH!) -->
-<script>
-const P = {
-  ink:"#13233A", paper:"#F5F2EC", card:"#FFFFFF", line:"#DDD6C8",
-  accent:"#E8553A", accentSoft:"#FBE7E1", blue:"#2E5B8C", blueSoft:"#E1EAF3",
-  good:"#2F8F5B", goodSoft:"#DDF0E4", bad:"#C23B2E", muted:"#6E7480",
-  purple:"#7A4FA3", teal:"#2A8C8C", gold:"#B07A2E", goldSoft:"#F0E4CF",
-  frBlue:"#3F6FB5", sci:"#4E8C3A", orga:"#A85A2E", net:"#2E6E8C", berry:"#B04A7E",
-};
+let fbUser = null;
+let fbAuth = null;
+let fbDb = null;
 
-const ROUNDS = 20;
-const LEVELS = ["leicht", "mittel", "schwer"];
-
-const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
-const pick = a => a[rnd(0, a.length-1)];
-function shuffle(arr) {
-  const a = [...arr];
-  for(let i = a.length-1; i > 0; i--) {
-    const j = rnd(0, i);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-// App State
-let S = {
-  screen: "home", mode: "area", area: null, level: 1, correctRun: 0, wrongRun: 0,
-  task: null, selected: null, levelMsg: null, order: [],
-  round: 0, score: 0, streak: 0, bestStreak: 0, correct: 0, prevBest: 0,
-  conc: null, concPhase: "show", concSel: null, concTimer: null,
-  mem: null, memPhase: "show", memSel: null, memTimer: null,
-  timed: false, timeLeft: 0, timer: null, perQ: 15, lastTaskTypes: []
-};
-
-const app = document.getElementById("app");
-
-function getBest(a) { try { return +localStorage.getItem("mc_best_"+a) || 0; } catch(e) { return 0; } }
-function setBest(a,v) { try { localStorage.setItem("mc_best_"+a, v); } catch(e) {} }
-
-// Login Handler
-function setupLoginButton() {
-  const btn = document.getElementById("authBtn");
-  if(!btn) return;
+function initializeApp() {
+  console.log("Initializing app...");
   
-  btn.onclick = async () => {
-    if(fbUser) {
-      fbAuth.signOut();
-    } else {
-      try {
-        console.log("🔄 Starting Google login...");
-        const provider = new firebase.auth.GoogleAuthProvider();
-        const result = await fbAuth.signInWithPopup(provider);
-        console.log("✅ Login successful:", result.user.email);
-      } catch(e) {
-        console.error("❌ Login error:", e);
-        alert("Login fehlgeschlagen: " + e.message);
-      }
-    }
+  if(!firebase) {
+    console.error("Firebase not loaded");
+    setTimeout(initializeApp, 1000);
+    return;
+  }
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQrrpCybMqy0lBjdz2QnhN6_jQxsseNkA",
+    authDomain: "klaras-multicheck.firebaseapp.com",
+    projectId: "klaras-multicheck",
+    storageBucket: "klaras-multicheck.firebasestorage.app",
+    messagingSenderId: "545763031616",
+    appId: "1:545763031616:web:a07af0ac5a88d1be337da5"
   };
+  
+  firebase.initializeApp(firebaseConfig);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  
+  console.log("✅ Firebase initialized");
+  
+  fbAuth.onAuthStateChanged(user => {
+    fbUser = user;
+    updateAuthUI();
+  });
+  
+  setupAuthButton();
+  renderHome();
 }
 
 function updateAuthUI() {
   const status = document.getElementById("authStatus");
   const btn = document.getElementById("authBtn");
-  const dashBtn = document.getElementById("dashBtn");
-  
-  if(!status || !btn) return;
   
   if(fbUser) {
-    status.textContent = "Hallo " + (fbUser.displayName || "").split(" ")[0];
+    status.textContent = fbUser.displayName || "User";
     btn.textContent = "Logout";
-    if(dashBtn) dashBtn.style.display = "block";
   } else {
-    status.textContent = "Nicht angemeldet";
+    status.textContent = "Not logged in";
     btn.textContent = "Login";
-    if(dashBtn) dashBtn.style.display = "none";
   }
 }
 
-fbAuth.onAuthStateChanged(u => {
-  updateAuthUI();
-});
+function setupAuthButton() {
+  document.getElementById("authBtn").onclick = async () => {
+    if(fbUser) {
+      fbAuth.signOut();
+    } else {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await fbAuth.signInWithPopup(provider);
+      } catch(e) {
+        alert("Login failed: " + e.message);
+      }
+    }
+  };
+}
 
-// STUB: Aufgabengeneratoren (alle Bereiche)
-const AREAS = ["math","german","english","logic","spatial"];
-function genMath(lv) { return {kind:"choice", kicker:"Mathematik", q:"2+2=?", opts:[{v:"4",ok:true},{v:"3",ok:false},{v:"5",ok:false}]}; }
-function genGerman(lv) { return {kind:"choice", kicker:"Deutsch", q:"Synonym von 'groß'?", opts:[{v:"riesig",ok:true},{v:"klein",ok:false},{v:"mittel",ok:false}]}; }
-function genEnglish(lv) { return {kind:"choice", kicker:"Englisch", q:"'big' auf Deutsch?", opts:[{v:"gross",ok:true},{v:"klein",ok:false},{v:"alt",ok:false}]}; }
-function genLogic(lv) { return {kind:"choice", kicker:"Logik", q:"Welche Zahl kommt nächst? 2, 4, 6, ?", opts:[{v:"8",ok:true},{v:"7",ok:false},{v:"9",ok:false}]}; }
-function genSpatial(lv) { return {kind:"choice", kicker:"Raumvorstellung", q:"Würfel gedreht?", opts:[{v:"ja",ok:true},{v:"nein",ok:false},{v:"vielleicht",ok:false}]}; }
-function genConcentration(lv) { return {target:"●", grid:["●","○","●","○","●"], answer:3, showMs:5000}; }
-function genMemory(lv) { return {kind:"mem", shown:["🌸","🐟","🔑"], opts:[{v:"🌸",ok:true},{v:"🚗",ok:false},{v:"🌙",ok:false},{v:"⭐",ok:false}], showMs:5000}; }
-
-const GEN = {
-  math: {gen:genMath, label:"Mathematik", icon:"∑", color:P.accent},
-  german: {gen:genGerman, label:"Deutsch", icon:"Aa", color:P.blue},
-  english: {gen:genEnglish, label:"Englisch", icon:"EN", color:P.teal},
-  logic: {gen:genLogic, label:"Logik", icon:"◇", color:P.purple},
-  spatial: {gen:genSpatial, label:"Raumvorstellung", icon:"▦", color:P.gold},
+// Game State
+let gameState = {
+  screen: "home",
+  area: null,
+  round: 0,
+  score: 0,
+  correct: 0,
+  question: null
 };
 
-function startSession(opts) {
-  S.mode = opts.mode;
-  S.area = opts.area || null;
-  S.level = 1;
-  S.correctRun = 0;
-  S.wrongRun = 0;
-  S.round = 0;
-  S.score = 0;
-  S.streak = 0;
-  S.correct = 0;
-  S.lastTaskTypes = [];
-  
-  const bestArea = opts.mode === "area" ? opts.area : ("mode_" + opts.mode);
-  S.scoreKey = bestArea;
-  S.prevBest = getBest(bestArea);
-  
-  nextTask();
-  S.screen = "play";
-  render();
-}
+const areas = [
+  { id: "math", name: "Mathe", color: "#E8553A" },
+  { id: "german", name: "Deutsch", color: "#2E5B8C" },
+  { id: "english", name: "English", color: "#2A8C8C" },
+  { id: "logic", name: "Logik", color: "#7A4FA3" },
+  { id: "science", name: "Science", color: "#4E8C3A" }
+];
 
-function nextTask() {
-  S.selected = null;
-  S.order = [];
-  S.levelMsg = null;
+function generateQuestion(area) {
+  const questions = {
+    math: [
+      {q: "2+2=?", opts: ["4", "3", "5"], correct: 0},
+      {q: "5*3=?", opts: ["15", "12", "18"], correct: 0},
+      {q: "10-3=?", opts: ["7", "6", "8"], correct: 0},
+    ],
+    german: [
+      {q: "Synonym für 'groß'?", opts: ["riesig", "klein", "mittel"], correct: 0},
+      {q: "Gegenteil von 'schnell'?", opts: ["langsam", "schneller", "sehr"], correct: 0},
+    ],
+    english: [
+      {q: "'big' auf Deutsch?", opts: ["groß", "klein", "neu"], correct: 0},
+      {q: "'hello' auf Deutsch?", opts: ["hallo", "tschüss", "danke"], correct: 0},
+    ],
+    logic: [
+      {q: "2, 4, 6, ?", opts: ["8", "7", "9"], correct: 0},
+      {q: "1, 1, 2, 3, 5, ?", opts: ["8", "6", "7"], correct: 0},
+    ],
+    science: [
+      {q: "Welcher Planet ist größer?", opts: ["Jupiter", "Erde", "Mars"], correct: 0},
+      {q: "Wie viele Knochen hat ein Mensch?", opts: ["206", "150", "250"], correct: 0},
+    ]
+  };
   
-  const area = S.mode === "area" ? S.area : pick(AREAS);
-  S.curAreaKey = area;
-  
-  if(GEN[area]) {
-    S.task = GEN[area].gen(S.level);
-  } else {
-    S.task = {kind:"choice", kicker:"Test", q:"Test Question?", opts:[{v:"Ja",ok:true},{v:"Nein",ok:false}]};
-  }
-}
-
-function answerChoice(idx) {
-  if(S.selected !== null) return;
-  S.selected = idx;
-  const ok = idx >= 0 && S.task.opts[idx].ok;
-  S.score += ok ? 10 : 0;
-  S.streak = ok ? S.streak + 1 : 0;
-  S.correct += ok ? 1 : 0;
-  render();
-}
-
-function proceed() {
-  const nr = S.round + 1;
-  if(nr >= ROUNDS) {
-    finish();
-  } else {
-    S.round = nr;
-    S.selected = null;
-    nextTask();
-  }
-  render();
-}
-
-function finish() {
-  if(S.score > getBest(S.scoreKey)) setBest(S.scoreKey, S.score);
-  S.screen = "result";
-  
-  // Firebase Sync
-  if(fbUser && S.mode === "area") {
-    fbDb.collection("users").doc(fbUser.uid).collection("sessions").add({
-      timestamp: new Date(),
-      area: S.area,
-      level: S.level,
-      score: S.score,
-      correct: S.correct,
-      total: ROUNDS,
-      streak: S.bestStreak,
-      mode: S.mode
-    }).then(() => console.log("✅ Data saved to Firebase")).catch(e => console.error("❌ Firebase write error:", e));
-  }
-  
-  render();
-}
-
-function render() {
-  if(S.screen === "home") {
-    renderHome();
-  } else if(S.screen === "result") {
-    renderResult();
-  } else {
-    renderPlay();
-  }
+  const list = questions[area] || [];
+  const q = list[Math.floor(Math.random() * list.length)];
+  return {
+    question: q.q,
+    options: q.opts,
+    correct: q.correct
+  };
 }
 
 function renderHome() {
-  app.innerHTML = \`
-    <header class="hero">
-      <div class="container">
-        <div class="eyebrow">Multicheck · Vor der Lehre</div>
-        <h1>Klaras Multicheck</h1>
-        <p class="sub">Hallo Klara! Trainiere mit 5 Bereichen, adaptive Schwierigkeit, 20 Aufgaben pro Runde.</p>
-        <div style="position:absolute;top:20px;right:20px;display:flex;gap:8px">
-          <div id="authStatus"></div>
-          <button id="authBtn" style="padding:8px 16px;background:#fff;color:#1C5B7A;border:none;border-radius:4px;cursor:pointer;font-weight:600">Login</button>
-        </div>
-      </div>
-    </header>
-    <div class="container" style="padding-top:20px">
-      <div class="sectionLabel">Bereiche einzeln üben</div>
-      <div class="grid2">
-        \${AREAS.map(k => \`
-          <div class="areaCard" data-area="\${k}" style="border-left:4px solid \${GEN[k].color}">
-            <div class="icon" style="background:\${GEN[k].color}">\${GEN[k].icon}</div>
-            <div class="areaTitle">\${GEN[k].label}</div>
-            <div class="areaGo">Runde starten →</div>
-          </div>
-        \`).join("")}
-      </div>
+  gameState.screen = "home";
+  const cardsHtml = areas.map(a => `
+    <div class="card" style="background:${a.color};color:white" onclick="startGame('${a.id}')">
+      <div style="font-size:32px;margin-bottom:10px">${a.name[0]}</div>
+      <div>${a.name}</div>
     </div>
-  \`;
+  `).join("");
   
-  setupLoginButton();
-  updateAuthUI();
-  
-  document.querySelectorAll("[data-area]").forEach(b => {
-    b.onclick = () => startSession({mode:"area", area:b.dataset.area});
-  });
+  document.getElementById("app").innerHTML = `
+    <header>
+      <h1>Klaras Multicheck</h1>
+      <p>Trainiere für den Multicheck</p>
+    </header>
+    <div class="home-grid">${cardsHtml}</div>
+  `;
 }
 
-function renderPlay() {
-  const t = S.task;
-  const area = S.curAreaKey;
-  const reveal = S.selected !== null;
-  
-  let body = "";
-  if(t.kind === "choice") {
-    body = \`<div class="opts">\${t.opts.map((o,i) => {
-      let cls = "opt";
-      if(reveal && o.ok) cls += " good";
-      else if(reveal && i === S.selected && !o.ok) cls += " bad";
-      const mk = reveal && o.ok ? "✓" : (reveal && i === S.selected && !o.ok ? "✕" : "");
-      return \`<button class="\${cls}" data-i="\${i}" \${reveal ? "disabled" : ""}><span>\${esc(o.v)}</span><span>\${mk}</span></button>\`;
-    }).join("")}</div>\`;
+function startGame(area) {
+  gameState.screen = "play";
+  gameState.area = area;
+  gameState.round = 0;
+  gameState.score = 0;
+  gameState.correct = 0;
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if(gameState.round >= 20) {
+    finishGame();
+    return;
   }
   
-  app.innerHTML = \`
-    <div class="container" style="padding-top:24px">
-      <div class="topbar">
-        <button class="back" id="back">← Menü</button>
-        <div class="pills" style="color:#fff">Runde \${S.round+1}/\${ROUNDS}</div>
-      </div>
-      <div class="progressWrap">
-        <div class="bar"><div class="barFill" style="width:\${(S.round/ROUNDS)*100}%;background:\${GEN[area]?.color || P.accent}"></div></div>
-      </div>
-      <div class="qcard">
-        <div class="qkicker">\${esc(t.kicker || "")}</div>
-        <div class="qtext">\${esc(t.q)}</div>
-      </div>
-      \${body}
-      \${reveal ? \`<button class="next" id="next">\${S.round+1 >= ROUNDS ? "Ergebnis" : "Weiter →"}</button>\` : ""}
-    </div>
-  \`;
-  
-  document.getElementById("back").onclick = () => {S.screen = "home"; render();};
-  document.querySelectorAll(".opt").forEach(b => b.onclick = () => answerChoice(+b.dataset.i));
-  const nx = document.getElementById("next");
-  if(nx) nx.onclick = proceed;
+  gameState.question = generateQuestion(gameState.area);
+  renderQuestion();
 }
 
-function renderResult() {
-  const pct = Math.round((S.correct / ROUNDS) * 100);
+function answerQuestion(idx) {
+  const correct = idx === gameState.question.correct;
+  gameState.correct += correct ? 1 : 0;
+  gameState.score += correct ? 10 : 0;
+  gameState.round++;
   
-  app.innerHTML = \`
-    <div class="container resultScreen">
-      <div class="eyebrow">Runde beendet</div>
-      <div class="bigScore">\${S.score}</div>
-      <div class="muted">Punkte</div>
-      <div class="statRow">
-        <div class="stat"><div class="statNum">\${S.correct}/\${ROUNDS}</div><div class="statLbl">richtig</div></div>
-      </div>
-      <div class="btnRow">
-        <button class="btnDark" id="again">Nochmal</button>
-        <button class="btnLight" id="menu">Menü</button>
-      </div>
-    </div>
-  \`;
-  
-  document.getElementById("again").onclick = () => startSession({mode:S.mode, area:S.area});
-  document.getElementById("menu").onclick = () => {S.screen = "home"; render();};
+  nextQuestion();
 }
 
-// Initial Render
-render();
+function renderQuestion() {
+  const opts = gameState.question.options.map((o, i) => `
+    <button class="opt" onclick="answerQuestion(${i})">${o}</button>
+  `).join("");
+  
+  document.getElementById("app").innerHTML = `
+    <div class="play-area">
+      <div class="progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${(gameState.round/20)*100}%"></div>
+        </div>
+        <div style="font-size:12px;color:#666;margin-top:4px">Frage ${gameState.round + 1}/20</div>
+      </div>
+      <div class="question">${gameState.question.question}</div>
+      <div class="options">${opts}</div>
+    </div>
+  `;
+}
 
-// Debug
-console.log("✅ App ready");
-console.log("🔥 Firebase:", firebase ? "loaded" : "ERROR");
-console.log("🔐 Auth:", fbAuth ? "ready" : "ERROR");
+function finishGame() {
+  if(fbUser && gameState.area) {
+    fbDb.collection("users").doc(fbUser.uid).collection("sessions").add({
+      timestamp: new Date(),
+      area: gameState.area,
+      score: gameState.score,
+      correct: gameState.correct,
+      total: 20
+    }).catch(e => console.error("Firebase error:", e));
+  }
+  
+  gameState.screen = "result";
+  document.getElementById("app").innerHTML = `
+    <div class="play-area" style="text-align:center">
+      <h2 style="margin-bottom:20px">Runde beendet!</h2>
+      <div class="score">${gameState.score}</div>
+      <div style="font-size:18px;margin-bottom:30px">${gameState.correct}/20 richtig</div>
+      <button onclick="renderHome()">Zurück zum Menü</button>
+    </div>
+  `;
+}
 </script>
 </body>
 </html>
