@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Klaras Fortschritt — Parent Dashboard</title>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
 .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-header { background: #1C5B7A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+header { background: #1C5B7A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 header h1 { font-size: 24px; }
-header button { padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; cursor: pointer; font-size: 13px; }
-header button:hover { background: rgba(255,255,255,0.3); }
+header button, header a.btn { padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
+header button:hover, header a.btn:hover { background: rgba(255,255,255,0.3); }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .card h3 { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
@@ -28,13 +28,16 @@ header button:hover { background: rgba(255,255,255,0.3); }
 .session-item .area { font-weight: 600; color: #1C5B7A; }
 .session-item .score { font-weight: 700; color: #2F8F5B; }
 .session-item .date { color: #999; font-size: 12px; }
-.login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 20px; }
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 16px; padding: 24px; text-align: center; }
 .btn-login { padding: 12px 24px; background: #1C5B7A; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
 .btn-login:hover { background: #154458; }
+.btn-alt { padding: 12px 24px; background: white; color: #1C5B7A; border: 2px solid #1C5B7A; border-radius: 4px; cursor: pointer; font-size: 15px; text-decoration: none; display: inline-block; }
 .stats-row { display: flex; gap: 12px; margin-top: 12px; }
 .mini-stat { flex: 1; text-align: center; padding: 8px; background: #f5f5f5; border-radius: 4px; }
 .mini-stat-val { font-size: 18px; font-weight: 700; color: #1C5B7A; }
 .mini-stat-lbl { font-size: 11px; color: #999; margin-top: 4px; }
+.hint { background: #e8f1f6; padding: 14px; border-radius: 8px; font-size: 14px; color: #234; max-width: 420px; line-height: 1.45; }
+.uid-box { width: 100%; max-width: 360px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -58,43 +61,115 @@ let currentUser = null;
 let klaraUid = null;
 let sessionsData = [];
 let chart = null;
+let mode = 'boot'; // boot | shared | firebase
+
+const AREA_NAMES = {
+  deutsch: 'Deutsch', englisch: 'Englisch', franzoesisch: 'Französisch',
+  mathematik: 'Mathematik', logic: 'Logik', organisation: 'Organisation',
+  networked: 'Vernetztes Denken', numbersequence: 'Zahlenreihen',
+  figural: 'Figuren', exam: 'Prüfungssimulation', review: 'Fehler-Übung'
+};
+function areaName(id) { return AREA_NAMES[id] || id || '?'; }
 
 const app = document.getElementById("app");
 
-fbAuth.onAuthStateChanged(async user => {
-  currentUser = user;
-  const urlParams = new URLSearchParams(window.location.search);
-  klaraUid = urlParams.get("uid");
-  
-  if(!currentUser) {
-    showLogin();
-  } else if(!klaraUid || klaraUid === currentUser.uid) {
-    // Parent logt sich ein mit eigenem Account
-    showAccessDenied();
-  } else {
-    // Parent hat UID von Klara, jetzt Daten laden
-    await loadSessions();
+function decodeShared(raw) {
+  if (!raw) return null;
+  try {
+    const json = decodeURIComponent(escape(atob(raw.replace(/-/g, '+').replace(/_/g, '/'))));
+    const data = JSON.parse(json);
+    const sessions = Array.isArray(data) ? data : (data.sessions || []);
+    return sessions.map(normalizeLocalSession).filter(Boolean);
+  } catch (e) { return null; }
+}
+
+function normalizeLocalSession(s) {
+  if (!s) return null;
+  const date = s.date || (s.timestamp && s.timestamp.toDate ? s.timestamp.toDate().toISOString() : null);
+  return {
+    area: s.area,
+    difficulty: s.difficulty,
+    correct: s.correct || 0,
+    total: s.total || 0,
+    score: s.score != null ? s.score : (s.percentage || 0),
+    percentage: s.percentage != null ? s.percentage : (s.score || 0),
+    durationSecs: s.durationSecs || 0,
+    date: date,
+    timestamp: s.timestamp || (date ? { toDate: () => new Date(date) } : null)
+  };
+}
+
+function getSessionDate(s) {
+  if (s.timestamp && typeof s.timestamp.toDate === 'function') return s.timestamp.toDate();
+  if (s.date) return new Date(s.date);
+  return null;
+}
+
+// Prefer shareable / local report over Firebase login friction
+(function boot() {
+  const params = new URLSearchParams(window.location.search);
+  klaraUid = params.get('uid');
+  const shared = decodeShared(params.get('d') || params.get('data'));
+  if (shared && shared.length) {
+    mode = 'shared';
+    sessionsData = shared;
     renderDashboard();
+    return;
   }
-});
+  // Redirect tip: if someone opens dashboard without uid, point to report.html
+  fbAuth.onAuthStateChanged(async user => {
+    if (mode === 'shared') return;
+    currentUser = user;
+    if (!currentUser) {
+      showLogin();
+    } else if (!klaraUid) {
+      showNeedUid();
+    } else if (klaraUid === currentUser.uid) {
+      // Same account = Klara viewing own cloud data is OK
+      mode = 'firebase';
+      if (await loadSessions()) renderDashboard();
+    } else {
+      mode = 'firebase';
+      if (await loadSessions()) renderDashboard();
+    }
+  });
+})();
 
 function showLogin() {
   app.innerHTML = `
     <div class="login-screen">
       <h1>Klaras Fortschritt</h1>
-      <p style="color:#999;font-size:14px">Parent-Dashboard</p>
+      <p style="color:#999;font-size:14px">Parent-Dashboard (Firebase)</p>
+      <div class="hint">
+        <strong>Einfacher (ohne Login):</strong><br>
+        Im Trainer unter <em>Statistiken → Eltern-Bericht</em> den Link kopieren
+        oder direkt den lokalen Bericht öffnen.
+      </div>
+      <a class="btn-alt" href="report.html">Lokalen Eltern-Bericht öffnen</a>
       <button class="btn-login" onclick="showAuthOptions()">Mit Apple oder Google anmelden</button>
+      <p style="color:#999;font-size:13px;max-width:380px">Für Firebase brauchst du Klaras UID im Link:<br><code>dashboard.html?uid=…</code></p>
     </div>`;
 }
 
-function showAccessDenied() {
+function showNeedUid() {
   app.innerHTML = `
     <div class="login-screen">
-      <h1>⚠️ Zugriff verweigert</h1>
-      <p style="color:#999;font-size:14px">Du kannst nur als Elternteil auf dieses Dashboard zugreifen.</p>
-      <p style="color:#999;font-size:13px;margin-top:20px">Klara sollte dir den Link mit ihrer UID geben.</p>
-      <button class="btn-login" onclick="fbAuth.signOut()">Logout</button>
+      <h1>UID von Klara fehlt</h1>
+      <div class="hint">
+        Klara kopiert im Trainer unter <em>Statistiken</em> den „Firebase-Link“.
+        Oder du fügst die UID hier ein:
+      </div>
+      <input class="uid-box" id="uidInput" placeholder="Klaras Firebase-UID">
+      <button class="btn-login" onclick="applyUid()">Dashboard öffnen</button>
+      <a class="btn-alt" href="report.html">Stattdessen lokaler Bericht</a>
+      <button class="btn-alt" onclick="fbAuth.signOut()">Logout</button>
     </div>`;
+}
+
+function applyUid() {
+  const uid = (document.getElementById('uidInput') || {}).value.trim();
+  if (!uid) { alert('Bitte UID eingeben'); return; }
+  location.search = '?uid=' + encodeURIComponent(uid);
 }
 
 function showAuthOptions() {
@@ -109,7 +184,7 @@ function showAuthOptions() {
       </div>
     </div>`;
   document.body.appendChild(div);
-  
+
   document.getElementById("btnApple").onclick = async () => {
     div.remove();
     try {
@@ -128,36 +203,57 @@ function showAuthOptions() {
   };
   document.getElementById("btnCancel").onclick = () => div.remove();
 }
-function loginGoogle() { showAuthOptions(); }
 
 async function loadSessions() {
   try {
     const snap = await fbDb.collection("users").doc(klaraUid).collection("sessions")
       .orderBy("timestamp", "desc").limit(100).get();
-    sessionsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    sessionsData = snap.docs.map(doc => {
+      const d = doc.data();
+      return normalizeLocalSession({ id: doc.id, ...d });
+    });
+    return true;
   } catch(e) {
     console.log("Error loading sessions:", e);
     sessionsData = [];
+    app.innerHTML = `
+      <div class="login-screen">
+        <h1>Daten nicht lesbar</h1>
+        <div class="hint">Firestore hat den Zugriff blockiert (Sicherheitsregeln). Nutze den lokalen Eltern-Bericht aus dem Trainer — der funktioniert ohne Firebase.</div>
+        <a class="btn-alt" href="report.html">Lokalen Bericht öffnen</a>
+        <button class="btn-login" onclick="fbAuth.signOut()">Logout</button>
+      </div>`;
+    return false;
   }
 }
 
 function renderDashboard() {
+  if (sessionsData === null) return;
+  // If loadSessions already rendered an error screen, skip
+  if (!Array.isArray(sessionsData)) return;
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
-  const recent = sessionsData.filter(s => s.timestamp && s.timestamp.toDate() > thirtyDaysAgo);
-  
-  const totalScore = recent.reduce((sum, s) => sum + (s.score || 0), 0);
+
+  const recent = sessionsData.filter(s => {
+    const d = getSessionDate(s);
+    return d && d > thirtyDaysAgo;
+  });
+
+  const totalScore = recent.reduce((sum, s) => sum + (s.score || s.percentage || 0), 0);
   const totalCorrect = recent.reduce((sum, s) => sum + (s.correct || 0), 0);
   const totalRounds = recent.reduce((sum, s) => sum + (s.total || 0), 0);
   const avgSuccess = totalRounds > 0 ? Math.round(totalCorrect / totalRounds * 100) : 0;
-  const uniqueDays = new Set(recent.map(s => s.timestamp.toDate().toDateString())).size;
-  
-  // Scores pro Bereich
+  const uniqueDays = new Set(recent.map(s => {
+    const d = getSessionDate(s);
+    return d ? d.toDateString() : '';
+  }).filter(Boolean)).size;
+
   const byArea = {};
   recent.forEach(s => {
-    if(!byArea[s.area]) byArea[s.area] = [];
-    byArea[s.area].push(s.score);
+    const key = s.area || '?';
+    if (!byArea[key]) byArea[key] = [];
+    byArea[key].push(s.score || s.percentage || 0);
   });
   const areaStats = Object.entries(byArea).map(([area, scores]) => ({
     area,
@@ -165,56 +261,64 @@ function renderDashboard() {
     max: Math.max(...scores),
     count: scores.length
   })).sort((a,b) => b.avg - a.avg);
-  
-  // Trend (letzte 10 Tage, tägl. Durchschnitt)
+
   const trendDays = {};
   recent.forEach(s => {
-    const day = s.timestamp.toDate().toDateString();
-    if(!trendDays[day]) trendDays[day] = [];
-    trendDays[day].push(s.score);
+    const d = getSessionDate(s);
+    if (!d) return;
+    const day = d.toDateString();
+    if (!trendDays[day]) trendDays[day] = [];
+    trendDays[day].push(s.score || s.percentage || 0);
   });
   const trend = Object.entries(trendDays)
     .sort((a,b) => new Date(b[0]) - new Date(a[0]))
     .slice(0,10)
     .reverse()
-    .map(([day, scores]) => ({day: day.split(' ')[0], avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}));
-  
+    .map(([day, scores]) => ({day: day.split(' ')[0] + ' ' + day.split(' ')[2], avg: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}));
+
+  const sourceLabel = mode === 'shared' ? 'Geteilter Bericht' : 'Letzte 30 Tage · Firebase';
+
   app.innerHTML = `
+    <div class="container">
     <header>
       <div>
         <h1>Klaras Fortschritt</h1>
-        <p style="font-size:13px;opacity:0.8">Letzte 30 Tage</p>
+        <p style="font-size:13px;opacity:0.8">${sourceLabel}</p>
       </div>
-      <button onclick="fbAuth.signOut()">Logout</button>
+      <div>
+        <a class="btn" href="report.html">Eltern-Bericht</a>
+        ${mode === 'firebase' ? '<button onclick="fbAuth.signOut()">Logout</button>' : '<a class="btn" href="index.html">Trainer</a>'}
+      </div>
     </header>
-    
-    <div class="container">
+
       <div class="grid">
         <div class="card">
           <h3>Trainings-Tage</h3>
           <div class="stat">${uniqueDays}</div>
           <div class="label">Tage mit Übung</div>
         </div>
-        
+
         <div class="card">
           <h3>Durchschnitt</h3>
-          <div class="stat">${recent.length > 0 ? Math.round(totalScore / recent.length) : 0}</div>
-          <div class="label">Punkte pro Runde</div>
+          <div class="stat">${recent.length > 0 ? Math.round(totalScore / recent.length) : 0}%</div>
+          <div class="label">Erfolg pro Training</div>
         </div>
-        
+
         <div class="card">
           <h3>Erfolgsquote</h3>
           <div class="stat">${avgSuccess}%</div>
           <div class="label">${totalCorrect} / ${totalRounds} richtig</div>
         </div>
-        
+
         <div class="card">
-          <h3>Runden</h3>
+          <h3>Trainings</h3>
           <div class="stat">${recent.length}</div>
           <div class="label">in 30 Tagen</div>
         </div>
       </div>
-      
+
+      ${recent.length === 0 ? '<div class="card" style="margin-bottom:20px"><p>Noch keine Trainings in den letzten 30 Tagen. Klara trainiert im <a href="index.html">Trainer</a> — danach unter Statistiken den Eltern-Bericht teilen.</p></div>' : ''}
+
       <div class="grid">
         <div class="card chart-card">
           <h3>Punkte-Trend (letzte 10 Trainings-Tage)</h3>
@@ -223,57 +327,60 @@ function renderDashboard() {
           </div>
         </div>
       </div>
-      
+
       <div class="grid">
         ${areaStats.map(a => `
           <div class="card">
-            <h3>${a.area}</h3>
-            <div class="stat">${a.avg}</div>
+            <h3>${areaName(a.area)}</h3>
+            <div class="stat">${a.avg}%</div>
             <div class="stats-row">
               <div class="mini-stat">
-                <div class="mini-stat-val">${a.max}</div>
+                <div class="mini-stat-val">${a.max}%</div>
                 <div class="mini-stat-lbl">Max</div>
               </div>
               <div class="mini-stat">
                 <div class="mini-stat-val">${a.count}</div>
-                <div class="mini-stat-lbl">Runden</div>
+                <div class="mini-stat-lbl">Trainings</div>
               </div>
             </div>
           </div>
         `).join("")}
       </div>
-      
+
       <div class="grid">
         <div class="card session-list">
-          <h3>Letzte Runden</h3>
-          ${recent.slice(0,20).map(s => `
+          <h3>Letzte Trainings</h3>
+          ${recent.slice(0,20).map(s => {
+            const d = getSessionDate(s);
+            const when = d ? d.toLocaleDateString('de-CH', {weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '?';
+            const pct = s.score || s.percentage || 0;
+            return `
             <div class="session-item">
               <div>
-                <div class="area">${s.area || "?"}</div>
-                <div class="date">${new Date(s.timestamp.toDate()).toLocaleDateString('de-CH', {weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+                <div class="area">${areaName(s.area)}</div>
+                <div class="date">${when}${s.difficulty ? ' · ' + s.difficulty : ''}</div>
               </div>
               <div style="text-align:right">
-                <div class="score">${s.score} Pkt</div>
+                <div class="score">${pct}%</div>
                 <div style="font-size:12px;color:#999">${s.correct}/${s.total} ✓</div>
               </div>
-            </div>
-          `).join("")}
+            </div>`;
+          }).join("") || '<p style="color:#999">Keine Einträge</p>'}
         </div>
       </div>
     </div>
   `;
-  
-  // Chart zeichnen
+
   setTimeout(() => {
     const ctx = document.getElementById("trendChart");
-    if(ctx && trend.length > 0) {
-      if(chart) chart.destroy();
+    if (ctx && trend.length > 0) {
+      if (chart) chart.destroy();
       chart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: trend.map(t => t.day),
           datasets: [{
-            label: 'Durchschnitt-Score',
+            label: 'Ø Erfolg %',
             data: trend.map(t => t.avg),
             borderColor: '#1C5B7A',
             backgroundColor: 'rgba(28, 91, 122, 0.1)',
@@ -287,7 +394,7 @@ function renderDashboard() {
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: false, min: 0 } }
+          scales: { y: { beginAtZero: true, max: 100 } }
         }
       });
     }

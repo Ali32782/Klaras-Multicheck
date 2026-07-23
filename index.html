@@ -63,13 +63,25 @@ header { background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%
 .dark .btn-secondary { background: #2a2a2a; }
 h1, h2, h3 { margin: 16px 0 12px; }
 .version { font-size: 10px; color: #999; text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; }
+.parent-box { background: #e8f1f6; border: 1px solid #c5d9e6; border-radius: 8px; padding: 14px; margin: 16px 0; }
+.dark .parent-box { background: #1a2a33; border-color: #345; }
+.parent-box h3 { margin: 0 0 8px; font-size: 15px; color: var(--primary); }
+.parent-box p { font-size: 13px; color: #555; margin-bottom: 10px; }
+.dark .parent-box p { color: #bbb; }
+.session-line { text-align: left; margin-bottom: 8px; }
+.session-line .meta { font-size: 11px; color: #888; margin-top: 2px; }
+.sync-ok { color: #2F8F5B; font-size: 12px; }
+.sync-off { color: #888; font-size: 12px; }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-// ===== Multicheck Trainer v12: Französisch Grammar-Mix + härtere Logik/Organisation/übrige Bereiche =====
+// ===== Multicheck Trainer v14: Eltern-Bericht (Share-Link, Wochenbericht, optional Firebase-Sync) =====
 
 const TARGET_PER_AREA = 300;
 
@@ -85,17 +97,39 @@ function pickWrongNums(answer, count, rnd) {
   const ans = Number(answer);
   const base = Number.isFinite(ans) ? ans : 0;
   const wrong = new Set();
+  const add = (c) => {
+    if (!Number.isFinite(c) || c === base) return;
+    if (base >= 0 && c < 0) return;
+    // keep similar magnitude / type
+    if (Number.isInteger(base) && !Number.isInteger(c)) c = Math.round(c);
+    wrong.add(c);
+  };
+  // Common Multicheck slip patterns
+  add(base + 1); add(base - 1); add(base + 2); add(base - 2);
+  add(Math.round(base * 1.1)); add(Math.round(base * 0.9));
+  add(Math.round(base * 1.25)); add(Math.round(base * 0.75));
+  if (base !== 0) { add(base * 2); add(Math.round(base / 2)); }
+  if (!Number.isInteger(base)) {
+    add(Math.round(base));
+    add(Math.round(base * 10) / 10 + 0.1);
+    add(Math.round(base * 10) / 10 - 0.1);
+  }
   let step = 1;
   while (wrong.size < count) {
-    const delta = Math.max(1, Math.round(Math.abs(base) * 0.1) || 1) * step;
+    const delta = Math.max(1, Math.round(Math.abs(base) * 0.08) || 1) * step;
     let cand = base + (rnd() > 0.5 ? delta : -delta);
-    // Prefer plausible non-negative distractors for non-negative answers
     if (base >= 0 && cand < 0) cand = base + delta;
-    if (cand !== base && Number.isFinite(cand)) wrong.add(cand);
+    add(cand);
     step++;
-    if (step > 50) wrong.add(base + wrong.size + 1);
+    if (step > 60) add(base + wrong.size + 3);
   }
-  return [...wrong];
+  // shuffle lightly via rnd for variety
+  const arr = [...wrong];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, count);
 }
 
 function makeNumQ(text, answer, difficulty, exp, id) {
@@ -1243,68 +1277,73 @@ function generateMathFragen() {
   const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
     const t = i % 6;
-    const a = 12 + (i % 28), b = 7 + ((i * 5) % 19);
-    if (t === 0) easy.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', 'Addition', 'math-e-a-' + i));
-    else if (t === 1) easy.push(makeNumQ((a + 25) + ' − ' + b + ' = ?', a + 25 - b, 'easy', 'Subtraktion', 'math-e-s-' + i));
-    else if (t === 2) {
-      const m = 6 + (i % 9), n = 4 + ((i * 3) % 8);
+    if (t === 0) {
+      const a = 28 + (i % 35), b = 17 + ((i * 7) % 23), c = 9 + (i % 11);
+      easy.push(makeNumQ(a + ' + ' + b + ' − ' + c + ' = ?', a + b - c, 'easy', 'Zwei Schritte', 'math-e-a-' + i));
+    } else if (t === 1) {
+      const a = 45 + (i % 40), b = 12 + ((i * 5) % 19), c = 3 + (i % 6);
+      easy.push(makeNumQ(a + ' − ' + b + ' − ' + c + ' = ?', a - b - c, 'easy', 'Doppel-Subtraktion', 'math-e-s-' + i));
+    } else if (t === 2) {
+      const m = 8 + (i % 11), n = 6 + ((i * 3) % 9);
       easy.push(makeNumQ(m + ' × ' + n + ' = ?', m * n, 'easy', 'Multiplikation', 'math-e-m-' + i));
     } else if (t === 3) {
-      const n = 47 + i * 3;
-      easy.push(makeNumQ('Runde ' + (n + 0.5) + ' auf ganze Zahl (kaufmännisch)?', n + 1, 'easy', 'Runden .5 auf', 'math-e-r-' + i));
+      const n = 124 + i * 7;
+      const x = n + ((i % 2) ? 0.4 : 0.6);
+      easy.push(makeNumQ('Runde ' + x + ' auf ganze Zahl?', Math.round(x), 'easy', 'Runden', 'math-e-r-' + i));
     } else if (t === 4) {
-      const x = 15 + (i % 20), y = 8 + (i % 12);
-      easy.push(makeTextQ('Größer und Differenz: max(' + x + ',' + y + ') − min = ?', String(Math.abs(x - y)), [String(x + y), String(Math.min(x, y))], 'easy', '|x−y|', 'math-e-c-' + i));
+      const tot = 96 + (i % 12) * 8, take = 15 + (i % 9) * 3, add = 7 + (i % 5);
+      easy.push(makeNumQ(tot + ' − ' + take + ' + ' + add + ' = ?', tot - take + add, 'easy', 'gemischt', 'math-e-c-' + i));
     } else {
-      const tot = 40 + (i % 10) * 4, part = 8 + (i % 7);
-      easy.push(makeNumQ(part + ' von ' + tot + ' fehlen. Wie viele bleiben?', tot - part, 'easy', 'Rest', 'math-e-rest-' + i));
+      const price = 48 + (i % 15) * 4, pct = 10 + (i % 4) * 5;
+      easy.push(makeNumQ(pct + '% von ' + price + ' = ?', price * pct / 100, 'easy', 'einfacher Prozentanteil', 'math-e-p-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 6;
     if (t === 0) {
-      const pct = 12 + (i % 17) * 4, base = 75 + (i % 14) * 15;
+      const pct = 18 + (i % 15) * 4, base = 125 + (i % 16) * 25;
       medium.push(makeNumQ(pct + '% von ' + base + ' = ?', pct * base / 100, 'medium', 'Prozent', 'math-m-p-' + i));
     } else if (t === 1) {
-      const x = 3 + (i % 12), c = 5 + (i % 9), k = 3 + (i % 4), r = k * x + c;
-      medium.push(makeNumQ(k + 'x + ' + c + ' = ' + r + '. x = ?', x, 'medium', 'lineare Gleichung', 'math-m-e-' + i));
+      const x = 4 + (i % 14), c = 7 + (i % 11), k = 3 + (i % 5), r = k * x - c;
+      medium.push(makeNumQ(k + 'x − ' + c + ' = ' + r + '. x = ?', x, 'medium', 'lineare Gleichung', 'math-m-e-' + i));
     } else if (t === 2) {
-      const n = 11 + (i % 15);
-      medium.push(makeNumQ(n + '² − ' + (n - 1) + '² = ?', n * n - (n - 1) * (n - 1), 'medium', 'Differenz Quadrate', 'math-m-q-' + i));
+      const n = 13 + (i % 12);
+      medium.push(makeNumQ(n + '² − ' + (n - 2) + '² = ?', n * n - (n - 2) * (n - 2), 'medium', 'Differenz Quadrate', 'math-m-q-' + i));
     } else if (t === 3) {
-      const num = 3 + (i % 7), den = 4 + (i % 5), whole = 60 + (i % 8) * 12;
+      const num = 5 + (i % 6), den = 6 + (i % 5), whole = 84 + (i % 9) * 12;
       const ans = (num / den) * whole;
-      medium.push(makeNumQ(num + '/' + den + ' von ' + whole + ' = ?', Math.round(ans * 1000) / 1000, 'medium', 'Bruchteil', 'math-m-f-' + i));
+      medium.push(makeNumQ(num + '/' + den + ' von ' + whole + ' = ?', Math.round(ans * 100) / 100, 'medium', 'Bruchteil', 'math-m-f-' + i));
     } else if (t === 4) {
-      const a = 8 + (i % 9), b = 14 + (i % 11), c = 20 + (i % 7), d = 6 + (i % 5);
-      medium.push(makeNumQ('Mittelwert von ' + a + ',' + b + ',' + c + ',' + d + '?', (a + b + c + d) / 4, 'medium', 'Durchschnitt 4 Werte', 'math-m-a-' + i));
+      const a = 11 + (i % 9), b = 17 + (i % 13), c = 23 + (i % 8), d = 9 + (i % 7), e = 14 + (i % 6);
+      medium.push(makeNumQ('Mittelwert ' + [a,b,c,d,e].join(',') + '?', Math.round(((a+b+c+d+e)/5)*100)/100, 'medium', '5er-Mittel', 'math-m-a-' + i));
     } else {
-      const price = 80 + (i % 20) * 5, disc = 10 + (i % 6) * 5;
-      medium.push(makeNumQ('Preis ' + price + ', Rabatt ' + disc + '%. Neuer Preis?', price * (100 - disc) / 100, 'medium', 'Rabatt', 'math-m-d-' + i));
+      const price = 160 + (i % 18) * 15, disc = 15 + (i % 7) * 5, tax = 5 + (i % 3) * 2;
+      const after = price * (100 - disc) / 100;
+      medium.push(makeNumQ('Preis ' + price + ', −' + disc + '%, dann +' + tax + '% Steuer ≈?', Math.round(after * (100 + tax) / 100 * 100) / 100, 'medium', 'Rabatt dann Steuer', 'math-m-d-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 6;
     if (t === 0) {
-      const a = 48 + (i % 9) * 12, b = 6 + (i % 7), q = a / b;
-      hard.push(makeNumQ('(' + a + ' ÷ ' + b + ') − ' + (3 + i % 5) + ' = ?', q - (3 + i % 5), 'hard', 'Division dann Subtraktion', 'math-h-d-' + i));
+      const a = 96 + (i % 8) * 24, b = 8 + (i % 6), sub = 5 + (i % 7);
+      hard.push(makeNumQ('(' + a + ' ÷ ' + b + ') × 3 − ' + sub + ' = ?', (a / b) * 3 - sub, 'hard', 'Kette Division/Mult', 'math-h-d-' + i));
     } else if (t === 1) {
-      const vals = [i % 9 + 4, i % 7 + 10, i % 5 + 15, i % 6 + 8, i % 4 + 20];
+      const vals = [i % 11 + 6, i % 9 + 12, i % 7 + 18, i % 8 + 9, i % 5 + 22, i % 6 + 14];
       const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
-      hard.push(makeNumQ('Mittelwert ' + vals.join(',') + '?', Math.round(avg * 100) / 100, 'hard', '5er-Mittel', 'math-h-a-' + i));
+      hard.push(makeNumQ('Mittelwert ' + vals.join(',') + ' (2 Dez.)?', Math.round(avg * 100) / 100, 'hard', '6er-Mittel', 'math-h-a-' + i));
     } else if (t === 2) {
-      const a = 5 + (i % 8), b = 6 + (i % 7), c = 3 + (i % 5);
-      hard.push(makeNumQ(a + '² + ' + b + '² − ' + c + '² = ?', a * a + b * b - c * c, 'hard', 'a²+b²−c²', 'math-h-p-' + i));
+      const a = 7 + (i % 7), b = 8 + (i % 6), c = 4 + (i % 5), d = 3 + (i % 4);
+      hard.push(makeNumQ(a + '² + ' + b + '² − ' + c + '² − ' + d + ' = ?', a*a + b*b - c*c - d, 'hard', 'Mehrterm', 'math-h-p-' + i));
     } else if (t === 3) {
-      const a = 4 + (i % 7), b = 5 + (i % 6), c = 2 + (i % 4);
-      hard.push(makeNumQ('(' + a + '+' + b + ')×' + c + ' − (' + a + '×' + b + ' − ' + c + ') = ?', (a + b) * c - (a * b - c), 'hard', 'Klammern+Reihenfolge', 'math-h-o-' + i));
+      const a = 5 + (i % 6), b = 6 + (i % 5), c = 3 + (i % 4), d = 2 + (i % 3);
+      hard.push(makeNumQ('(' + a + '+' + b + ')×' + c + ' − (' + a + '×' + d + ' + ' + b + ') = ?', (a+b)*c - (a*d + b), 'hard', 'Klammern', 'math-h-o-' + i));
     } else if (t === 4) {
-      const part = 7 + (i % 9), whole = part * (5 + (i % 5)) + (i % 3);
-      hard.push(makeNumQ('Anteil ' + part + ' an ' + whole + ' in % (1 Dezimal)?', Math.round(part / whole * 1000) / 10, 'hard', 'Anteil%', 'math-h-r-' + i));
+      const part = 11 + (i % 10), whole = part * (6 + (i % 5)) + 3 + (i % 7);
+      hard.push(makeNumQ('Anteil ' + part + '/' + whole + ' in % (1 Dez.)?', Math.round(part / whole * 1000) / 10, 'hard', 'Anteil%', 'math-h-r-' + i));
     } else {
-      const p1 = 15 + (i % 10), p2 = 20 + (i % 8), base = 200 + (i % 12) * 25;
-      const ans = base * (100 + p1) / 100 * (100 - p2) / 100;
-      hard.push(makeNumQ(base + ' zuerst +' + p1 + '%, dann −' + p2 + '% = ?', Math.round(ans * 100) / 100, 'hard', 'sequentielle Prozente', 'math-h-seq-' + i));
+      const p1 = 12 + (i % 11), p2 = 18 + (i % 9), p3 = 8 + (i % 5), base = 250 + (i % 14) * 30;
+      const ans = base * (100 + p1) / 100 * (100 - p2) / 100 * (100 + p3) / 100;
+      hard.push(makeNumQ(base + ': +' + p1 + '%, dann −' + p2 + '%, dann +' + p3 + '% ≈?', Math.round(ans * 100) / 100, 'hard', '3 sequenzielle %', 'math-h-seq-' + i));
     }
   }
   return assemble300(easy, medium, hard);
@@ -1316,70 +1355,69 @@ function generateNumberSequenceFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      const step = 3 + (i % 8), a = 5 + (i % 25);
+      const step = 4 + (i % 9), a = 11 + (i % 28);
       const seq = [a, a + step, a + 2 * step, a + 3 * step];
       easy.push(makeNumQ(seq.join(', ') + ', ?', a + 4 * step, 'easy', '+' + step, 'ns-e-ar-' + i));
     } else if (t === 1) {
-      const step = 2 + (i % 6), a = 40 + (i % 35);
+      const step = 3 + (i % 7), a = 55 + (i % 40);
       const seq = [a, a - step, a - 2 * step, a - 3 * step];
       easy.push(makeNumQ(seq.join(', ') + ', ?', a - 4 * step, 'easy', '−' + step, 'ns-e-sub-' + i));
     } else if (t === 2) {
-      const a = 3 + (i % 12), step = 2;
-      easy.push(makeNumQ([a, a + step, a + 2 * step, a + 3 * step].join(', ') + ', ?', a + 4 * step, 'easy', '+2', 'ns-e-p2-' + i));
-    } else if (t === 3) {
-      let x = 2 + (i % 4); const seq = [];
+      const a = 5 + (i % 10); let x = a; const seq = [];
       for (let k = 0; k < 4; k++) { seq.push(x); x *= 2; }
       easy.push(makeNumQ(seq.join(', ') + ', ?', x, 'easy', '×2', 'ns-e-dbl-' + i));
-    } else {
-      const a = 10 + (i % 15), b = 3 + (i % 4);
+    } else if (t === 3) {
+      const a = 7 + (i % 12), b = 4 + (i % 5);
       easy.push(makeNumQ([a, a + b, a + 2 * b, a + 3 * b].join(', ') + ', ?', a + 4 * b, 'easy', '+' + b, 'ns-e-mix-' + i));
+    } else {
+      // +3,+5,+7 pattern start
+      const n = 8 + (i % 14);
+      easy.push(makeNumQ([n, n + 3, n + 8, n + 15].join(', ') + ', ?', n + 24, 'easy', '+3,+5,+7,+9', 'ns-e-odd-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      const m = 2 + (i % 3); let a = 2 + (i % 4); const seq = [];
+      const m = 3 + (i % 2); let a = 2 + (i % 5); const seq = [];
       for (let k = 0; k < 4; k++) { seq.push(a); a *= m; }
       medium.push(makeNumQ(seq.join(', ') + ', ?', a, 'medium', '×' + m, 'ns-m-geo-' + i));
     } else if (t === 1) {
-      const start = 2 + (i % 12); const seq = [start]; let cur = start;
-      for (let k = 1; k <= 3; k++) { cur += k + 1; seq.push(cur); }
-      medium.push(makeNumQ(seq.join(', ') + ', ?', cur + 5, 'medium', '+2,+3,+4,+5', 'ns-m-inc-' + i));
+      const start = 4 + (i % 11); const seq = [start]; let cur = start;
+      for (let k = 1; k <= 3; k++) { cur += k + 2; seq.push(cur); }
+      medium.push(makeNumQ(seq.join(', ') + ', ?', cur + 6, 'medium', '+3,+4,+5,+6', 'ns-m-inc-' + i));
     } else if (t === 2) {
-      const n = 3 + (i % 7);
-      medium.push(makeNumQ([n * n, (n + 1) * (n + 1), (n + 2) * (n + 2), (n + 3) * (n + 3)].join(', ') + ', ?', (n + 4) * (n + 4), 'medium', 'Quadrate', 'ns-m-sq-' + i));
+      const n = 4 + (i % 8);
+      medium.push(makeNumQ([n*n, (n+1)*(n+1), (n+2)*(n+2), (n+3)*(n+3)].join(', ') + ', ?', (n+4)*(n+4), 'medium', 'Quadrate', 'ns-m-sq-' + i));
     } else if (t === 3) {
-      const a = 4 + (i % 6), b = 2 + (i % 4), s0 = 12 + i % 11;
+      const a = 5 + (i % 6), b = 3 + (i % 4), s0 = 15 + i % 13;
       const seq = [s0, s0 + a, s0 + a - b, s0 + 2 * a - b];
       medium.push(makeNumQ(seq.join(', ') + ', ?', s0 + 2 * a - 2 * b, 'medium', 'Wechsel +' + a + '/−' + b, 'ns-m-alt-' + i));
     } else {
-      // primes-ish +n^2 mixed: n, n+3, n+8, n+15 (=+3,+5,+7)
-      const n = 5 + (i % 10);
-      const seq = [n, n + 3, n + 8, n + 15];
-      medium.push(makeNumQ(seq.join(', ') + ', ?', n + 24, 'medium', '+3,+5,+7,+9', 'ns-m-odd-' + i));
+      let a = 3 + (i % 4); const seq = [];
+      for (let k = 0; k < 4; k++) { seq.push(a); a = a * 2 + 1; }
+      medium.push(makeNumQ(seq.join(', ') + ', ?', a, 'medium', '×2+1', 'ns-m-21-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      let a = 2 + (i % 4), b = 3 + (i % 5); const seq = [a, b];
+      let a = 3 + (i % 5), b = 5 + (i % 6); const seq = [a, b];
       for (let k = 0; k < 3; k++) { const n = a + b; a = b; b = n; seq.push(n); }
       hard.push(makeNumQ(seq.slice(0, 4).join(', ') + ', ?', seq[4], 'hard', 'Fibonacci-artig', 'ns-h-fib-' + i));
     } else if (t === 1) {
-      const a = 2 + (i % 5), b = 3 + (i % 6);
-      const seq = [a, b, a + 3, b * 2 + 1];
-      hard.push(makeNumQ(seq.join(', ') + ', ? (zwei Reihen)', a + 6, 'hard', 'ungerade Stellen +3', 'ns-h-int-' + i));
+      const a = 3 + (i % 6), b = 4 + (i % 7);
+      const seq = [a, b, a + 4, b * 2 - 1];
+      hard.push(makeNumQ(seq.join(', ') + ', ? (zwei Reihen)', a + 8, 'hard', 'ungerade Stellen +4', 'ns-h-int-' + i));
     } else if (t === 2) {
-      const start = 3 + (i % 9); const seq = [start]; let cur = start;
-      for (let k = 1; k <= 3; k++) { cur += k * k + 1; seq.push(cur); }
-      hard.push(makeNumQ(seq.join(', ') + ', ?', cur + (16 + 1), 'hard', '+(k²+1)', 'ns-h-sqd-' + i));
+      const start = 4 + (i % 8); const seq = [start]; let cur = start;
+      for (let k = 1; k <= 3; k++) { cur += k * k + k; seq.push(cur); }
+      hard.push(makeNumQ(seq.join(', ') + ', ?', cur + (16 + 4), 'hard', '+(k²+k)', 'ns-h-sqd-' + i));
     } else if (t === 3) {
-      let a = 2 + (i % 5); const seq = [];
-      for (let k = 0; k < 4; k++) { seq.push(a); a = a * 2 + (k + 1); }
-      hard.push(makeNumQ(seq.join(', ') + ', ?', a, 'hard', '×2+steigend', 'ns-h-21-' + i));
+      let a = 2 + (i % 4); const seq = [];
+      for (let k = 0; k < 4; k++) { seq.push(a); a = a * 3 - 1; }
+      hard.push(makeNumQ(seq.join(', ') + ', ?', a, 'hard', '×3−1', 'ns-h-31-' + i));
     } else {
-      // 2nd differences constant (quadratic)
-      const a0 = 2 + (i % 6), d = 3 + (i % 4), dd = 2 + (i % 3);
+      const a0 = 3 + (i % 5), d = 4 + (i % 4), dd = 3 + (i % 3);
       const s1 = a0, s2 = a0 + d, s3 = s2 + d + dd, s4 = s3 + d + 2 * dd;
       const next = s4 + d + 3 * dd;
       hard.push(makeNumQ([s1, s2, s3, s4].join(', ') + ', ?', next, 'hard', 'quadratisch (2. Diff)', 'ns-h-quad-' + i));
@@ -1391,7 +1429,6 @@ function generateNumberSequenceFragen() {
 // ---------- LOGIC ----------
 function generateLogicFragen() {
   const animals = ['Hund','Katze','Maus','Pferd','Vogel','Fisch','Kuh','Schaf','Hase','Fuchs'];
-  const colors = ['Rot','Blau','Grün','Gelb','Schwarz','Weiss','Orange','Lila'];
   const vehicles = ['Auto','Bus','Zug','Flugzeug','Schiff','Fahrrad','Tram','Taxi'];
   const tools = ['Hammer','Säge','Zange','Schraubenzieher','Bohrer','Feile'];
   const foods = ['Brot','Apfel','Käse','Milch','Reis','Suppe','Salat','Joghurt'];
@@ -1400,84 +1437,91 @@ function generateLogicFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      const step = 3 + (i % 6), a = 4 + (i % 18);
-      easy.push(makeNumQ('Logik-Reihe: ' + a + ', ' + (a + step) + ', ' + (a + 2 * step) + ', ' + (a + 3 * step) + ', ?', a + 4 * step, 'easy', '+' + step, 'lg-e-s-' + i));
+      const step = 4 + (i % 7), a = 7 + (i % 20);
+      easy.push(makeNumQ('Logik-Reihe: ' + [a, a+step, a+2*step, a+3*step].join(', ') + ', ?', a + 4*step, 'easy', '+' + step, 'lg-e-s-' + i));
     } else if (t === 1) {
       const odd = vehicles[i % vehicles.length];
-      const a1 = animals[i % animals.length], a2 = animals[(i + 2) % animals.length], a3 = animals[(i + 4) % animals.length];
-      easy.push(makeTextQ('Was passt nicht? ' + a1 + ', ' + a2 + ', ' + a3 + ', ' + odd, odd, [a1, a3], 'easy', odd + ' ist kein Tier', 'lg-e-o-' + i));
+      const pool = [animals[i%animals.length], animals[(i+2)%animals.length], animals[(i+4)%animals.length], odd];
+      // shuffle display order deterministically
+      const ord = [(i)%4, (i+1)%4, (i+2)%4, (i+3)%4];
+      const shown = ord.map(j => pool[j]);
+      easy.push(makeTextQ('Was passt kategorial nicht? ' + shown.join(', '), odd, [animals[i%animals.length], animals[(i+4)%animals.length]], 'easy', odd + ' ≠ Tier', 'lg-e-o-' + i));
     } else if (t === 2) {
-      easy.push(makeTextQ('Alle Pflegekräfte sind hilfsbereit. Sam ist Pflegekraft. Folgt daraus zwingend?', 'Sam ist hilfsbereit', ['Sam ist Arzt','Schluss unmöglich'], 'easy', 'gültiger Syllogismus', 'lg-e-y-' + i));
+      easy.push(makeTextQ('Alle A sind B. X ist ein A. Folgt zwingend?', 'X ist ein B', ['X ist kein B','Schluss unmöglich'], 'easy', 'gültiger Syllogismus', 'lg-e-y-' + i));
     } else if (t === 3) {
-      const c1 = colors[i % colors.length];
-      easy.push(makeTextQ('Analogie: Lenkrad:Auto = ' + foods[i % foods.length] + ':?', 'Essen/Nahrung', ['Fahrzeug','Farbe ' + c1], 'easy', 'Teil-Ganzes bzw. Kategorie', 'lg-e-a-' + i));
+      easy.push(makeTextQ('Analogie: Flügel:Vogel = Flosse:?', 'Fisch', ['Feder','Käfig'], 'easy', 'Funktionsanalogie', 'lg-e-a-' + i));
     } else {
-      const n = 3 + (i % 5);
-      easy.push(makeTextQ('Wenn heute Dienstag ist und in ' + n + ' Tagen Termin: Welcher Wochentag?', ['Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag','Montag'][n % 7], ['gestern','unbestimmt'], 'easy', 'Wochentag +' + n, 'lg-e-w-' + i));
+      const n = 4 + (i % 6);
+      const days = ['Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag','Montag'];
+      easy.push(makeTextQ('Heute Dienstag, Termin in ' + n + ' Tagen — Wochentag?', days[n % 7], [days[(n+1)%7], days[(n+3)%7]], 'easy', 'Wochentag +' + n, 'lg-e-w-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
       const odd = tools[i % tools.length];
-      const f1 = foods[i % foods.length], f2 = foods[(i + 2) % foods.length], f3 = foods[(i + 4) % foods.length];
-      medium.push(makeTextQ('Kategorie-Bruch: Was passt nicht? ' + f1 + ', ' + odd + ', ' + f2 + ', ' + f3, odd, [f2, f3], 'medium', 'Werkzeug vs Essen', 'lg-m-o-' + i));
+      const f1 = foods[i % foods.length], f2 = foods[(i+2)%foods.length], f3 = foods[(i+4)%foods.length];
+      medium.push(makeTextQ('Was passt nicht (feinere Kategorie)? ' + [f1, odd, f2, f3].join(', '), odd, [f2, f3], 'medium', 'Werkzeug vs Essen', 'lg-m-o-' + i));
     } else if (t === 1) {
       const variants = [
-        ['Alle A sind B. Einige C sind A. Folgt: Einige C sind B?', 'Ja (gültig)', ['Nein nie','Unklar immer'], 'Teil-Syllogismus'],
-        ['Alle A sind B. X ist kein B. Folgt: X ist kein A?', 'Ja', ['Nein','Nur manchmal'], 'Modus tollens Kategorie'],
-        ['Manche Pflegekräfte sind Nachtdienst. Alle NachtDienste sind belastend. Folgt: Manche Pflegekräfte haben belastenden Dienst?', 'Ja (plausibel/gültig)', ['Nein unmöglich','Nur Zufall'], 'Kettenschluss']
+        ['Alle A sind B. Einige C sind A. Folgt: Einige C sind B?', 'Ja (gültig)', ['Nein nie','Unklar immer']],
+        ['Alle A sind B. X ist kein B. Folgt: X ist kein A?', 'Ja', ['Nein','Nur manchmal']],
+        ['Manche Pflegekräfte machen Nachtdienst. Alle Nachtdienste sind belastend. Folgt: Manche Pflegekräfte haben belastenden Dienst?', 'Ja', ['Nein unmöglich','Nur Zufall']],
+        ['Kein A ist B. Alle C sind A. Folgt: Kein C ist B?', 'Ja', ['Nein','Unklar']]
       ];
       const v = variants[i % variants.length];
-      medium.push(makeTextQ(v[0], v[1], v[2], 'medium', v[3], 'lg-m-y-' + i));
+      medium.push(makeTextQ(v[0], v[1], v[2], 'medium', 'Syllogismus', 'lg-m-y-' + i));
     } else if (t === 2) {
-      const a = 10 + (i % 9), b = a - (2 + i % 4), c = b - (1 + i % 3);
-      medium.push(makeTextQ('A=' + a + ', B=' + b + ', C=' + c + '. A>B und B>C. Was gilt sicher?', 'A > C', ['A < C','Relation unbekannt'], 'medium', 'Transitivität', 'lg-m-t-' + i));
+      const a = 18 + (i % 11), b = a - (3 + i % 5), c = b - (2 + i % 4), d = c - (1 + i % 3);
+      medium.push(makeTextQ('A=' + a + ' > B=' + b + ' > C=' + c + ' > D=' + d + '. Zweitgrößte?', 'B', ['C','A'], 'medium', 'A>B>C>D', 'lg-m-t-' + i));
     } else if (t === 3) {
-      let a = 3 + (i % 5);
+      let a = 4 + (i % 6);
       const s1 = a, s2 = a * 2 + 1, s3 = s2 * 2 - 1, s4 = s3 * 2 + 1;
-      medium.push(makeNumQ('Reihe: ' + s1 + ', ' + s2 + ', ' + s3 + ', ?', s4, 'medium', '×2±1 wechselnd', 'lg-m-r-' + i));
+      medium.push(makeNumQ('Reihe: ' + [s1,s2,s3].join(', ') + ', ?', s4, 'medium', '×2±1 wechselnd', 'lg-m-r-' + i));
     } else {
-      // seating / order
-      const names = ['Ana','Ben','Chris','Dana'];
-      const first = names[i % 4], second = names[(i + 1) % 4], third = names[(i + 2) % 4];
-      medium.push(makeTextQ(first + ' vor ' + second + ', ' + second + ' vor ' + third + '. Wer in der Mitte (3 Personen)?', second, [first, third], 'medium', 'Reihenfolge', 'lg-m-ord-' + i));
+      const names = ['Ana','Ben','Chris','Dana','Eli'];
+      const order = [names[i%5], names[(i+1)%5], names[(i+2)%5], names[(i+3)%5]];
+      medium.push(makeTextQ(order[0] + ' vor ' + order[1] + ', ' + order[1] + ' vor ' + order[2] + ', ' + order[2] + ' vor ' + order[3] + '. Wer ist Zweite/r?', order[1], [order[0], order[2]], 'medium', 'Reihenfolge', 'lg-m-ord-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 6;
     if (t === 0) {
-      const a = 20 + (i % 10), b = a - (3 + i % 5), c = b - (2 + i % 4), d = c - (1 + i % 3);
-      hard.push(makeTextQ('Größen: A=' + a + ' > B=' + b + ' > C=' + c + ' > D=' + d + '. Wer ist zweitkleinste?', 'C', ['B','D'], 'hard', 'A>B>C>D → C zweitkleinste', 'lg-h-abc-' + i));
+      const vals = [30+(i%8), 24+(i%6), 18+(i%5), 12+(i%4), 6+(i%3)];
+      // A>B>C>D>E implicitly by construction if sorted desc
+      const sorted = [...vals].sort((a,b)=>b-a);
+      hard.push(makeTextQ('Größen ' + ['A','B','C','D','E'].map((n,j)=>n+'='+vals[j]).join(', ') + ' (nicht sortiert). Wer ist Median?',
+        ['A','B','C','D','E'][vals.indexOf(sorted[2])],
+        [['A','B','C','D','E'][vals.indexOf(sorted[0])], ['A','B','C','D','E'][vals.indexOf(sorted[4])]],
+        'hard', 'Median der 5', 'lg-h-abc-' + i));
     } else if (t === 1) {
       const stmts = [
-        ['Aussage: „Keine Regel ohne Ausnahme.“ Folgt logisch: Es gibt Ausnahmen zu Regeln?', 'Ja (nach Aussage)', ['Nein zwingend falsch','Unmöglich'], 'quantorische Lesart'],
-        ['„Nur wenn Alarm, dann Evakuierung.“ Alarm ausgelöst. Folgt Evakuierung zwingend?', 'Nein (nur-wenn ≠ wenn-dann)', ['Ja sicher','Unmöglich'], 'nur-wenn vs wenn'],
-        ['„Alle erfolgreichen Teams kommunizieren.“ Team X kommuniziert. Folgt: X ist erfolgreich?', 'Nicht zwingend', ['Ja sicher','Nein unmöglich'], 'Affirming the consequent']
+        ['„Nur wenn Alarm, dann Evakuierung.“ Alarm ausgelöst. Folgt Evakuierung zwingend?', 'Nein (nur-wenn ≠ wenn-dann)', ['Ja sicher','Unmöglich']],
+        ['„Alle erfolgreichen Teams kommunizieren.“ Team X kommuniziert. Folgt: X ist erfolgreich?', 'Nicht zwingend', ['Ja sicher','Nein unmöglich']],
+        ['„Keine Regel ohne Ausnahme.“ Folgt: Es gibt Ausnahmen zu Regeln?', 'Ja (nach Aussage)', ['Nein zwingend falsch','Unmöglich']]
       ];
       const s = stmts[i % stmts.length];
-      hard.push(makeTextQ(s[0], s[1], s[2], 'hard', s[3], 'lg-h-ex-' + i));
+      hard.push(makeTextQ(s[0], s[1], s[2], 'hard', 'Aussagenlogik', 'lg-h-ex-' + i));
     } else if (t === 2) {
       hard.push(makeTextQ('Wenn Regen → Straße nass. Straße ist nass. Folgt: Es hat geregnet?', 'Nicht zwingend (andere Ursachen möglich)', ['Ja sicher','Nein unmöglich'], 'hard', 'Affirming the consequent', 'lg-h-rain-' + i));
     } else if (t === 3) {
       hard.push(makeTextQ('Regel: Wenn Alarm, dann Evakuierung. Alarm ausgelöst. Folgt Evakuierung?', 'Ja (Modus ponens)', ['Nein','Unklar nach Regel'], 'hard', 'Modus ponens', 'lg-h-mp-' + i));
     } else if (t === 4) {
       const cards = [
-        ['Vier Karten zeigen A / K / 2 / 7. Regel: Vokal → gerade Zahl. Welche mind. umdrehen?', 'A und 7', ['nur A','A und 2'], 'Wason: Vokal + ungerade'],
-        ['Karten: E / 4 / B / 9. Regel: Vokal → gerade. Welche prüfen?', 'E und 9', ['E und 4','nur E'], 'Wason-Variante'],
-        ['Karten: U / 6 / M / 3. Regel: Vokal → gerade. Mindestprüfung?', 'U und 3', ['U und 6','nur 3'], 'Wason']
+        ['Karten A/K/2/7. Regel: Vokal → gerade Zahl. Welche mind. umdrehen?', 'A und 7', ['nur A','A und 2']],
+        ['Karten E/4/B/9. Regel: Vokal → gerade. Welche prüfen?', 'E und 9', ['E und 4','nur E']],
+        ['Karten U/6/M/3. Regel: Vokal → gerade. Mindestprüfung?', 'U und 3', ['U und 6','nur 3']]
       ];
       const c = cards[i % cards.length];
-      hard.push(makeTextQ(c[0] + ' (Variante ' + i + ')', c[1], c[2], 'hard', c[3], 'lg-h-was-' + i));
+      hard.push(makeTextQ(c[0], c[1], c[2], 'hard', 'Wason', 'lg-h-was-' + i));
     } else {
-      // truth table / double negation / contradiction
       const q = [
-        ['P oder Q ist wahr, P ist falsch. Folgt Q?', 'Ja', ['Nein','Unklar'], 'Disjunktion'],
-        ['Nicht (nicht P). Äquivalent zu?', 'P', ['nicht P','P oder Q'], 'doppelte Negation'],
-        ['Wenn P→Q und nicht Q, dann?', 'nicht P', ['P','Q'], 'Modus tollens'],
-        ['P und nicht P gleichzeitig?', 'Widerspruch / unmöglich', ['immer wahr','manchmal ok'], 'Kontradiktion']
+        ['P∨Q wahr, P falsch. Folgt Q?', 'Ja', ['Nein','Unklar']],
+        ['¬(¬P) äquivalent zu?', 'P', ['¬P','P∨Q']],
+        ['P→Q und ¬Q. Folgt?', '¬P', ['P','Q']],
+        ['P ∧ ¬P gleichzeitig?', 'Widerspruch / unmöglich', ['immer wahr','manchmal ok']]
       ][i % 4];
-      hard.push(makeTextQ(q[0], q[1], q[2], 'hard', q[3], 'lg-h-prop-' + i));
+      hard.push(makeTextQ(q[0], q[1], q[2], 'hard', 'Propositional', 'lg-h-prop-' + i));
     }
   }
   return assemble300(easy, medium, hard);
@@ -1595,28 +1639,29 @@ function generateOrganisationFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const startH = 7 + (i % 12), startM = (i % 4) * 15, dur = 45 + (i % 5) * 15;
+      const startH = 7 + (i % 11), startM = (i % 4) * 15, dur = 50 + (i % 6) * 15;
       const endTotal = startH * 60 + startM + dur;
       const eh = Math.floor(endTotal / 60) % 24, em = endTotal % 60;
-      const ans = String(eh).padStart(2, '0') + ':' + String(em).padStart(2, '0');
-      const start = String(startH).padStart(2, '0') + ':' + String(startM).padStart(2, '0');
-      const w1 = String(eh).padStart(2, '0') + ':' + String((em + 15) % 60).padStart(2, '0');
-      const w2 = String((eh + 1) % 24).padStart(2, '0') + ':' + String(em).padStart(2, '0');
-      easy.push(makeTextQ('Termin Start ' + start + ', Dauer ' + dur + ' Min. Ende?', ans, [w1, w2], 'easy', start + '+' + dur, 'org-e-t-' + i));
+      const ans = String(eh).padStart(2,'0') + ':' + String(em).padStart(2,'0');
+      const start = String(startH).padStart(2,'0') + ':' + String(startM).padStart(2,'0');
+      easy.push(makeTextQ('Start ' + start + ', Dauer ' + dur + ' Min. Ende?', ans, [
+        String(eh).padStart(2,'0') + ':' + String((em + 15) % 60).padStart(2,'0'),
+        String((eh + 1) % 24).padStart(2,'0') + ':' + String(em).padStart(2,'0')
+      ], 'easy', start + '+' + dur, 'org-e-t-' + i));
     } else if (t === 1) {
-      const tasks = 4 + (i % 5);
-      easy.push(makeTextQ(tasks + ' Aufgaben, begrenzte Zeit. Beste erste Aktion?', 'Priorisieren und grob schätzen', ['Alles parallel starten','Zufällig eine wählen'], 'easy', 'Priorisieren', 'org-e-p-' + i));
+      easy.push(makeTextQ((5 + i % 4) + ' Aufgaben, knappe Zeit. Beste erste Aktion?', 'Priorisieren + grobe Zeitschätzung', ['Alles parallel starten','Zufällig eine wählen'], 'easy', 'Priorisieren', 'org-e-p-' + i));
     } else if (t === 2) {
-      const a = 25 + (i % 30), b = 8 + (i % 15);
-      easy.push(makeTextQ('Termin A in ' + a + ' Min, B in ' + b + ' Min, beide nötig. Welchen zuerst angehen?', b <= a ? 'B (früher fällig)' : 'A (früher fällig)', [b <= a ? 'A' : 'B', 'Egal / gleichzeitig ohne Plan'], 'easy', 'früher fällig', 'org-e-d-' + i));
+      const a = 35 + (i % 25), b = 12 + (i % 18), c = 20 + (i % 15);
+      const soon = Math.min(a, b, c);
+      const label = soon === a ? 'A' : (soon === b ? 'B' : 'C');
+      easy.push(makeTextQ('Fällig: A in ' + a + ', B in ' + b + ', C in ' + c + ' Min. Zuerst?', label + ' (früheste Frist)', ['längste Frist zuerst','Egal'], 'easy', 'früheste Frist', 'org-e-d-' + i));
     } else {
-      const prep = 10 + (i % 6) * 5, travel = 15 + (i % 5) * 5, meet = 9 * 60 + (i % 4) * 15;
+      const prep = 15 + (i % 5) * 5, travel = 20 + (i % 5) * 5, meet = 10 * 60 + (i % 5) * 15;
       const leave = meet - prep - travel;
-      const lh = Math.floor(leave / 60), lm = leave % 60;
-      const ans = String(lh).padStart(2, '0') + ':' + String(lm).padStart(2, '0');
-      const meetStr = String(Math.floor(meet / 60)).padStart(2, '0') + ':' + String(meet % 60).padStart(2, '0');
-      easy.push(makeTextQ('Meeting ' + meetStr + ', Anfahrt ' + travel + ' + Vorbereitung ' + prep + ' Min. Wann spätestens starten?', ans, [
-        String(Math.floor((meet - travel) / 60)).padStart(2, '0') + ':' + String((meet - travel) % 60).padStart(2, '0'),
+      const ans = String(Math.floor(leave/60)).padStart(2,'0') + ':' + String(leave%60).padStart(2,'0');
+      const meetStr = String(Math.floor(meet/60)).padStart(2,'0') + ':' + String(meet%60).padStart(2,'0');
+      easy.push(makeTextQ('Meeting ' + meetStr + '; Anfahrt ' + travel + ' + Prep ' + prep + ' Min. Spätester Start?', ans, [
+        String(Math.floor((meet-travel)/60)).padStart(2,'0') + ':' + String((meet-travel)%60).padStart(2,'0'),
         meetStr
       ], 'easy', 'Meeting−Anfahrt−Prep', 'org-e-leave-' + i));
     }
@@ -1624,59 +1669,53 @@ function generateOrganisationFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      const budget = 250 + (i % 18) * 50, pct = 15 + (i % 10) * 5, spent2 = 20 + (i % 8) * 5;
-      const after1 = budget * (100 - pct) / 100;
-      const rest = after1 - spent2;
-      medium.push(makeNumQ('Budget ' + budget + ', erst ' + pct + '% weg, dann noch ' + spent2 + ' ausgegeben. Rest?', rest, 'medium', 'Rest nach % und Fix', 'org-m-b-' + i));
+      const budget = 400 + (i % 16) * 50, pct = 18 + (i % 9) * 4, spent2 = 35 + (i % 10) * 8;
+      const rest = budget * (100 - pct) / 100 - spent2;
+      medium.push(makeNumQ('Budget ' + budget + '; −' + pct + '%, dann −' + spent2 + '. Rest?', rest, 'medium', 'Rest nach % und Fix', 'org-m-b-' + i));
     } else if (t === 1) {
-      const need = 6 + (i % 5), have = 2 + (i % 4), block = 1 + (i % 2);
-      medium.push(makeTextQ('Brauche ' + need + 'h, habe ' + have + 'h frei, plus ' + block + 'h Blocker. Effektive Lücke?', String(need - have + block) + 'h', [String(need - have) + 'h', String(have + block) + 'h'], 'medium', 'Lücke inkl. Blocker', 'org-m-g-' + i));
+      const need = 7 + (i % 5), have = 2 + (i % 4), block = 1 + (i % 3);
+      medium.push(makeTextQ('Brauch ' + need + 'h, frei ' + have + 'h, Blocker ' + block + 'h. Effektive Lücke?', String(need - have + block) + 'h', [String(need - have) + 'h', String(have + block) + 'h'], 'medium', 'Lücke inkl. Blocker', 'org-m-g-' + i));
     } else if (t === 2) {
-      medium.push(makeTextQ('Eisenhower: dringend+wichtig / dringend+nicht wichtig / nicht dringend+wichtig. Zuerst?', 'dringend und wichtig', ['nur unwichtiges','Zufall / alles gleich'], 'medium', 'Eisenhower Q1', 'org-m-e-' + i));
+      medium.push(makeTextQ('Eisenhower: was zuerst?', 'dringend und wichtig', ['dringend aber unwichtig zuerst immer','nicht dringend/wichtig ignorieren'], 'medium', 'Q1', 'org-m-e-' + i));
     } else if (t === 3) {
-      const aS = 8 * 60 + (i % 3) * 30, aE = aS + 60 + (i % 3) * 15;
-      const bS = aS + 30 + (i % 4) * 15, bE = bS + 45 + (i % 3) * 15;
+      const aS = 8*60 + (i%4)*20, aE = aS + 70 + (i%3)*15;
+      const bS = aS + 25 + (i%5)*10, bE = bS + 55 + (i%3)*10;
       const overlap = Math.max(0, Math.min(aE, bE) - Math.max(aS, bS));
-      medium.push(makeNumQ('Termin A ' + Math.floor(aS/60) + ':' + String(aS%60).padStart(2,'0') + '–' + Math.floor(aE/60) + ':' + String(aE%60).padStart(2,'0') + ', B ' + Math.floor(bS/60) + ':' + String(bS%60).padStart(2,'0') + '–' + Math.floor(bE/60) + ':' + String(bE%60).padStart(2,'0') + '. Überlappung (Min)?', overlap, 'medium', 'Intervall-Overlap', 'org-m-ov-' + i));
+      medium.push(makeNumQ('A ' + Math.floor(aS/60)+':'+String(aS%60).padStart(2,'0')+'–'+Math.floor(aE/60)+':'+String(aE%60).padStart(2,'0') +
+        ', B ' + Math.floor(bS/60)+':'+String(bS%60).padStart(2,'0')+'–'+Math.floor(bE/60)+':'+String(bE%60).padStart(2,'0') + '. Überlapp (Min)?', overlap, 'medium', 'Intervall-Overlap', 'org-m-ov-' + i));
     } else {
-      const slots = 4 + (i % 4), each = 25 + (i % 5) * 5, breakM = 10;
-      const total = slots * each + (slots - 1) * breakM;
-      medium.push(makeNumQ(slots + ' Termine à ' + each + ' Min + ' + breakM + ' Min Pause dazwischen. Gesamtzeit?', total, 'medium', 'n×Dauer+(n−1)×Pause', 'org-m-chain-' + i));
+      const slots = 5 + (i % 3), each = 30 + (i % 4) * 5, breakM = 12;
+      medium.push(makeNumQ(slots + ' Termine à ' + each + ' Min + ' + breakM + ' Min Pause dazwischen. Gesamt?', slots * each + (slots - 1) * breakM, 'medium', 'n×Dauer+(n−1)×Pause', 'org-m-chain-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 5;
     if (t === 0) {
-      const cap = 7 + (i % 5), t1 = 2 + (i % 3), t2 = 2 + (i % 4), t3 = 1 + ((i + 1) % 3), buffer = 1;
+      const cap = 8 + (i % 5), t1 = 2 + (i % 3), t2 = 2 + (i % 4), t3 = 2 + ((i + 1) % 3), buffer = 1 + (i % 2);
       const sum = t1 + t2 + t3 + buffer, ok = sum <= cap ? 'Ja (mit Puffer)' : 'Nein';
-      hard.push(makeTextQ('Kapazität ' + cap + 'h, Aufgaben ' + t1 + '+' + t2 + '+' + t3 + 'h + Puffer ' + buffer + 'h. Machbar?', ok, [ok === 'Ja (mit Puffer)' ? 'Nein' : 'Ja (mit Puffer)', 'Unmöglich zu sagen'], 'hard', sum + ' vs ' + cap, 'org-h-c-' + i));
+      hard.push(makeTextQ('Kapazität ' + cap + 'h; Aufgaben ' + t1 + '+' + t2 + '+' + t3 + ' + Puffer ' + buffer + '. Machbar?', ok, [ok === 'Ja (mit Puffer)' ? 'Nein' : 'Ja (mit Puffer)', 'Unklar'], 'hard', sum + ' vs ' + cap, 'org-h-c-' + i));
     } else if (t === 1) {
-      const staff = 3 + (i % 4), patients = 11 + (i % 10), absences = 1 + (i % 2);
-      const effective = staff - absences;
-      hard.push(makeNumQ(staff + ' geplant, ' + absences + ' ausfallend, ' + patients + ' Patient:innen. Ø Belastung (1 Dez.)?', Math.round((patients / effective) * 10) / 10, 'hard', 'patients/(staff−Ausfall)', 'org-h-l-' + i));
+      const staff = 4 + (i % 4), patients = 14 + (i % 11), absences = 1 + (i % 2);
+      hard.push(makeNumQ(staff + ' geplant, ' + absences + ' Ausfall, ' + patients + ' Patient:innen. Ø Belastung (1 Dez.)?', Math.round((patients / (staff - absences)) * 10) / 10, 'hard', 'patients/(staff−Ausfall)', 'org-h-l-' + i));
     } else if (t === 2) {
-      const a = 35 + (i % 12), b = 40 + (i % 15), c = 25 + (i % 10), overlapAB = 12 + (i % 6), overlapBC = 8 + (i % 5);
-      // sequential A then B with overlapAB parallel possible, then C with overlapBC vs B end — simplify: A+B+C - overlapAB - overlapBC
-      hard.push(makeNumQ('A ' + a + ', B ' + b + ', C ' + c + ' Min; A∥B ' + overlapAB + ', B∥C ' + overlapBC + ' Min. Mindestgesamtzeit?', a + b + c - overlapAB - overlapBC, 'hard', 'A+B+C−Overlaps', 'org-h-o-' + i));
+      const a = 40 + (i % 12), b = 45 + (i % 14), c = 30 + (i % 11), oAB = 14 + (i % 6), oBC = 10 + (i % 5);
+      hard.push(makeNumQ('A' + a + '+B' + b + '+C' + c + '; A∥B ' + oAB + ', B∥C ' + oBC + '. Mindestzeit?', a + b + c - oAB - oBC, 'hard', 'A+B+C−Overlaps', 'org-h-o-' + i));
     } else if (t === 3) {
-      const deadline = 16 * 60, now = (10 + i % 4) * 60 + (i % 3) * 15;
-      const work = 180 + (i % 5) * 30, travel = 40 + (i % 4) * 10;
-      const need = work + travel;
-      const left = deadline - now;
-      const ok = need <= left ? 'Ja' : 'Nein';
-      hard.push(makeTextQ('Jetzt ' + String(Math.floor(now/60)).padStart(2,'0') + ':' + String(now%60).padStart(2,'0') + ', Deadline 16:00, Arbeit ' + work + '+Weg ' + travel + ' Min. Noch schaffbar?', ok, [ok === 'Ja' ? 'Nein' : 'Ja', 'Nur mit 0 Puffer unsicher'], 'hard', need + ' vs ' + left, 'org-h-dl-' + i));
+      const deadline = 17 * 60, now = (9 + i % 5) * 60 + (i % 4) * 10;
+      const work = 200 + (i % 6) * 25, travel = 45 + (i % 5) * 10;
+      const need = work + travel, left = deadline - now, ok = need <= left ? 'Ja' : 'Nein';
+      hard.push(makeTextQ('Jetzt ' + String(Math.floor(now/60)).padStart(2,'0')+':'+String(now%60).padStart(2,'0') + ', Deadline 17:00; Arbeit ' + work + '+Weg ' + travel + '. Schaffbar?', ok, [ok==='Ja'?'Nein':'Ja', 'Nur ohne Puffer unsicher'], 'hard', need + ' vs ' + left, 'org-h-dl-' + i));
     } else {
-      const w1 = 3 + (i % 4), w2 = 2 + (i % 3), w3 = 4 + (i % 3);
-      const p1 = 5, p2 = 3, p3 = 4; // priority weights
-      // choose highest priority-density: p/w
-      const d1 = p1 / w1, d2 = p2 / w2, d3 = p3 / w3;
-      let best = 'Aufgabe 1 (' + w1 + 'h, Prio ' + p1 + ')';
-      if (d2 >= d1 && d2 >= d3) best = 'Aufgabe 2 (' + w2 + 'h, Prio ' + p2 + ')';
-      if (d3 >= d1 && d3 >= d2) best = 'Aufgabe 3 (' + w3 + 'h, Prio ' + p3 + ')';
-      hard.push(makeTextQ('3 Aufgaben: (1) ' + w1 + 'h/Prio' + p1 + ', (2) ' + w2 + 'h/Prio' + p2 + ', (3) ' + w3 + 'h/Prio' + p3 + '. Nach Prio/Zeit zuerst?', best, [
-        best.indexOf('1') >= 0 ? 'Aufgabe 2 (' + w2 + 'h, Prio ' + p2 + ')' : 'Aufgabe 1 (' + w1 + 'h, Prio ' + p1 + ')',
-        'Immer die längste zuerst'
-      ], 'hard', 'höchste Prio-Dichte', 'org-h-pd-' + i));
+      const w1 = 3 + (i % 4), w2 = 2 + (i % 3), w3 = 5 + (i % 3);
+      const p1 = 6, p2 = 4, p3 = 5;
+      const dens = [p1/w1, p2/w2, p3/w3];
+      const bi = dens[0] >= dens[1] && dens[0] >= dens[2] ? 0 : (dens[1] >= dens[2] ? 1 : 2);
+      const labels = [
+        'Aufgabe 1 (' + w1 + 'h, Prio ' + p1 + ')',
+        'Aufgabe 2 (' + w2 + 'h, Prio ' + p2 + ')',
+        'Aufgabe 3 (' + w3 + 'h, Prio ' + p3 + ')'
+      ];
+      hard.push(makeTextQ('Nach Prio/Zeit zuerst? (1) ' + w1 + 'h/P' + p1 + ', (2) ' + w2 + 'h/P' + p2 + ', (3) ' + w3 + 'h/P' + p3, labels[bi], [labels[(bi+1)%3], 'Immer die längste zuerst'], 'hard', 'höchste Prio-Dichte', 'org-h-pd-' + i));
     }
   }
   return assemble300(easy, medium, hard);
@@ -2022,7 +2061,10 @@ const state = {
   usedIds: new Set(),
   recentIds: loadJSON('mc_recent_ids', []),
   mistakes: loadJSON('mc_mistakes', []),
-  version: 'v12-french-mix-harder-bands'
+  version: 'v14-parent-reports',
+  fbReady: false,
+  fbUid: localStorage.getItem('mc_fb_uid') || null,
+  fbSyncStatus: 'off'
 };
 
 if (state.darkMode) document.body.classList.add('dark');
@@ -2195,7 +2237,211 @@ function saveSession(area, duration, correct, total, difficulty) {
   };
   state.sessions.push(session);
   localStorage.setItem('mc_sessions', JSON.stringify(state.sessions));
+  syncSessionToFirebase(session);
 }
+
+// ---------- Parent report helpers ----------
+function areaLabel(id) {
+  const a = areas.find(x => x.id === id);
+  if (a) return a.name;
+  if (id === 'exam') return 'Prüfungssimulation';
+  if (id === 'review') return 'Fehler-Übung';
+  return id || '?';
+}
+
+function dayKey(iso) {
+  const d = new Date(iso);
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+function calcStreak(sessions) {
+  if (!sessions.length) return 0;
+  const daySet = new Set(sessions.map(s => dayKey(s.date)));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let cursor = new Date(today);
+  const todayKey = dayKey(today.toISOString());
+  const yest = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+  if (!daySet.has(todayKey) && daySet.has(dayKey(yest.toISOString()))) cursor = yest;
+  let streak = 0;
+  while (daySet.has(dayKey(cursor.toISOString()))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function sessionsByArea(sessions) {
+  const map = {};
+  sessions.forEach(s => {
+    const id = s.area || 'exam';
+    if (!map[id]) map[id] = { id, count: 0, pctSum: 0, correct: 0, total: 0 };
+    map[id].count++;
+    map[id].pctSum += s.percentage || 0;
+    map[id].correct += s.correct || 0;
+    map[id].total += s.total || 0;
+  });
+  return Object.values(map).map(a => ({
+    ...a,
+    avg: a.count ? Math.round(a.pctSum / a.count) : 0
+  })).sort((x, y) => y.avg - x.avg);
+}
+
+function encodeReportPayload(sessions) {
+  const payload = JSON.stringify({
+    v: 1,
+    exportedAt: new Date().toISOString(),
+    sessions: sessions || []
+  });
+  return btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function reportBaseUrl() {
+  let dir = location.pathname;
+  if (/index\.html$/i.test(dir)) dir = dir.replace(/index\.html$/i, '');
+  else if (!dir.endsWith('/')) dir = dir.replace(/\/[^/]*$/, '/');
+  if (!dir.endsWith('/')) dir += '/';
+  return location.origin + dir + 'report.html';
+}
+
+function buildWeeklySummaryText() {
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const recent = state.sessions.filter(s => new Date(s.date).getTime() >= weekAgo);
+  const avg = recent.length ? Math.round(recent.reduce((a, s) => a + (s.percentage || 0), 0) / recent.length) : 0;
+  const days = new Set(recent.map(s => dayKey(s.date))).size;
+  const top = sessionsByArea(recent).slice(0, 5).map(a => areaLabel(a.id) + ' ' + a.avg + '%').join(', ');
+  return [
+    '📋 Klaras Multicheck — Wochenbericht',
+    'Zeitraum: letzte 7 Tage',
+    '',
+    'Trainings: ' + recent.length,
+    'Übungstage: ' + days,
+    'Ø Erfolg: ' + avg + '%',
+    'Serie: ' + calcStreak(state.sessions) + ' Tag(e)',
+    top ? ('Bereiche: ' + top) : 'Noch keine Trainings diese Woche.',
+    '',
+    'Vollständiger Bericht: ' + reportBaseUrl()
+  ].join('\n');
+}
+
+function openParentReport() {
+  const encoded = encodeReportPayload(state.sessions.slice(-80));
+  const url = reportBaseUrl() + '?d=' + encoded;
+  if (url.length > 7000) {
+    // fallback: same-device localStorage
+    window.open(reportBaseUrl(), '_blank');
+    return;
+  }
+  window.open(url, '_blank');
+}
+
+function copyWeeklySummary() {
+  const text = buildWeeklySummaryText();
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Wochenbericht kopiert — z.B. an Papa per WhatsApp senden.');
+  }).catch(() => prompt('Kopieren:', text));
+}
+
+function copyParentReportLink() {
+  const encoded = encodeReportPayload(state.sessions.slice(-80));
+  const url = reportBaseUrl() + '?d=' + encoded;
+  if (url.length > 7000) {
+    alert('Zu viele Trainings für einen Link. Bitte „Wochenbericht kopieren“ oder Bericht auf diesem Gerät öffnen.');
+    return;
+  }
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Eltern-Link kopiert! Papa öffnet ihn ohne Login.');
+  }).catch(() => prompt('Link:', url));
+}
+
+function exportSessionsJson() {
+  const blob = new Blob([JSON.stringify({
+    v: 1,
+    exportedAt: new Date().toISOString(),
+    sessions: state.sessions
+  }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'klara-multicheck-bericht.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyFirebaseParentLink() {
+  if (!state.fbUid) {
+    alert('Cloud-Sync noch nicht bereit. Der lokale Eltern-Bericht funktioniert trotzdem.');
+    return;
+  }
+  const url = location.origin + location.pathname.replace(/index\.html$/, '') + 'dashboard.html?uid=' + encodeURIComponent(state.fbUid);
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Firebase-Dashboard-Link kopiert.\nHinweis: Papa braucht Google/Apple-Login und Firestore-Zugriff.');
+  }).catch(() => prompt('Link:', url));
+}
+
+// ---------- Optional Firebase sync (anonymous) ----------
+const firebaseConfig = {
+  apiKey: 'AIzaSyDQrrpCybMqy0lBjdz2QnhN6_jQxsseNkA',
+  authDomain: 'klaras-multicheck.firebaseapp.com',
+  projectId: 'klaras-multicheck',
+  storageBucket: 'klaras-multicheck.firebasestorage.app',
+  messagingSenderId: '545763031616',
+  appId: '1:545763031616:web:a07af0ac5a88d1be337da5'
+};
+
+function initFirebaseSync() {
+  if (typeof firebase === 'undefined') {
+    state.fbSyncStatus = 'off';
+    return;
+  }
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        state.fbUid = user.uid;
+        state.fbReady = true;
+        state.fbSyncStatus = 'ok';
+        localStorage.setItem('mc_fb_uid', user.uid);
+        if (state.screen === 'home' && state.tab === 'stats') render();
+      } else {
+        try {
+          await auth.signInAnonymously();
+        } catch (e) {
+          state.fbSyncStatus = 'off';
+          console.log('Firebase anonymous auth unavailable:', e && e.message);
+        }
+      }
+    });
+  } catch (e) {
+    state.fbSyncStatus = 'off';
+    console.log('Firebase init failed:', e && e.message);
+  }
+}
+
+async function syncSessionToFirebase(session) {
+  if (!state.fbReady || typeof firebase === 'undefined' || !state.fbUid) return;
+  try {
+    const db = firebase.firestore();
+    await db.collection('users').doc(state.fbUid).collection('sessions').add({
+      area: session.area,
+      difficulty: session.difficulty || null,
+      correct: session.correct,
+      total: session.total,
+      score: session.percentage,
+      percentage: session.percentage,
+      durationSecs: session.durationSecs,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      date: session.date
+    });
+    state.fbSyncStatus = 'ok';
+  } catch (e) {
+    state.fbSyncStatus = 'error';
+    console.log('Firebase session sync failed:', e && e.message);
+  }
+}
+
+initFirebaseSync();
 
 function toggleDarkMode() {
   state.darkMode = !state.darkMode;
@@ -2271,16 +2517,56 @@ function renderHome(app) {
   } else {
     html += '<h2>📊 Statistiken</h2>';
     const avg = state.sessions.length > 0 ? Math.round(state.sessions.reduce((a, b) => a + b.percentage, 0) / state.sessions.length) : 0;
+    const streak = calcStreak(state.sessions);
+    const uniqueDays = new Set(state.sessions.map(s => dayKey(s.date))).size;
     html += '<div class="stats-grid">';
     html += '<div class="stat-card"><div class="stat-num">' + state.sessions.length + '</div><div class="stat-label">Trainings</div></div>';
     html += '<div class="stat-card"><div class="stat-num">' + avg + '%</div><div class="stat-label">Ø Quote</div></div>';
+    html += '<div class="stat-card"><div class="stat-num">' + streak + '</div><div class="stat-label">Serie (Tage)</div></div>';
+    html += '<div class="stat-card"><div class="stat-num">' + uniqueDays + '</div><div class="stat-label">Übungstage</div></div>';
     html += '<div class="stat-card"><div class="stat-num">' + mistakeCount + '</div><div class="stat-label">Offene Fehler</div></div>';
     html += '</div>';
-    for (let s of state.sessions.slice(-10).reverse()) {
-      const area = areas.find(a => a.id === s.area) || {name: s.area};
-      const diff = difficulties.find(d => d.id === s.difficulty);
-      html += '<div class="stat-card">' + area.name + ': ' + s.correct + '/' + s.total + ' (' + s.percentage + '%)' + (diff ? ' · ' + diff.name : '') + '</div>';
+
+    const areaStats = sessionsByArea(state.sessions);
+    if (areaStats.length) {
+      html += '<h3>Erfolg pro Bereich</h3>';
+      areaStats.forEach(a => {
+        html += '<div class="stat-card session-line"><div style="font-weight:600;">' + areaLabel(a.id) + ': ' + a.avg + '%</div>';
+        html += '<div class="meta">' + a.count + ' Training' + (a.count === 1 ? '' : 's') + ' · ' + a.correct + '/' + a.total + ' richtig</div></div>';
+      });
     }
+
+    html += '<h3>Letzte Trainings</h3>';
+    if (!state.sessions.length) {
+      html += '<p style="color:#666;font-size:13px;margin:8px 0;">Noch keine Trainings gespeichert.</p>';
+    } else {
+      for (let s of state.sessions.slice(-12).reverse()) {
+        const diff = difficulties.find(d => d.id === s.difficulty);
+        const mins = Math.floor((s.durationSecs || 0) / 60);
+        const secs = String((s.durationSecs || 0) % 60).padStart(2, '0');
+        let when = '';
+        try {
+          when = new Date(s.date).toLocaleDateString('de-CH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        } catch (e) { when = s.date; }
+        html += '<div class="stat-card session-line">' + areaLabel(s.area) + ': ' + s.correct + '/' + s.total + ' (' + s.percentage + '%)';
+        html += '<div class="meta">' + when + (diff ? ' · ' + diff.name : '') + ' · ' + mins + ':' + secs + '</div></div>';
+      }
+    }
+
+    html += '<div class="parent-box">';
+    html += '<h3>👨‍👧 Eltern-Bericht (für Papa)</h3>';
+    html += '<p>Zeigt Fortschritt, Erfolg pro Bereich, letzte Trainings und Serie. Papa braucht kein Login — einfach Link oder Wochenbericht schicken.</p>';
+    html += '<button class="btn" onclick="openParentReport()">Eltern-Bericht öffnen</button>';
+    html += '<button class="btn btn-secondary" onclick="copyParentReportLink()">Bericht-Link kopieren</button>';
+    html += '<button class="btn btn-secondary" onclick="copyWeeklySummary()">Wochenbericht kopieren</button>';
+    html += '<button class="btn btn-secondary" onclick="exportSessionsJson()">JSON exportieren</button>';
+    if (state.fbUid) {
+      html += '<p class="sync-ok" style="margin-top:10px;">Cloud-Sync aktiv · optional Firebase-Dashboard:</p>';
+      html += '<button class="btn btn-secondary" onclick="copyFirebaseParentLink()">Firebase-Link kopieren</button>';
+    } else {
+      html += '<p class="sync-off" style="margin-top:10px;">Cloud-Sync optional (wenn verfügbar). Lokaler Bericht funktioniert immer.</p>';
+    }
+    html += '</div>';
   }
   html += '</div><div class="version">' + state.version + ' | ' + countQuestions() + ' Fragen total</div>';
   app.innerHTML = html;
