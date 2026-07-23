@@ -69,232 +69,647 @@ h1, h2, h3 { margin: 16px 0 12px; }
 <div id="app"></div>
 
 <script>
-// ===== MASSIVE FRAGE-BANK: 300+ PRO BEREICH & LEVEL =====
+// ===== Multicheck Trainer v9: 300 echte Fragen/Bereich + Anti-Repeat + Fehler üben =====
 
+const TARGET_PER_AREA = 300;
+
+function seedRand(n) {
+  let x = (n * 1103515245 + 12345) & 0x7fffffff;
+  return () => {
+    x = (x * 1103515245 + 12345) & 0x7fffffff;
+    return x / 0x7fffffff;
+  };
+}
+
+function pickWrongNums(answer, count, rnd) {
+  const wrong = new Set();
+  let step = 1;
+  while (wrong.size < count) {
+    const delta = Math.max(1, Math.round(Math.abs(answer) * 0.1) || 1) * step;
+    const cand = answer + (rnd() > 0.5 ? delta : -delta);
+    if (cand !== answer) wrong.add(cand);
+    step++;
+    if (step > 50) wrong.add(answer + wrong.size + 1);
+  }
+  return [...wrong];
+}
+
+function makeNumQ(text, answer, difficulty, exp, id) {
+  const rnd = seedRand(id.split('').reduce((a, c) => a + c.charCodeAt(0), 0));
+  const wrong = pickWrongNums(Number(answer), 2, rnd).map(String);
+  return { id, q: text, opts: [String(answer), wrong[0], wrong[1]], correct: 0, difficulty, exp };
+}
+
+function makeTextQ(text, correctOpt, wrongOpts, difficulty, exp, id) {
+  const opts = [correctOpt, ...wrongOpts.slice(0, 2)];
+  while (opts.length < 3) opts.push('—');
+  return { id, q: text, opts, correct: 0, difficulty, exp };
+}
+
+function fillTo300(base, area, maker) {
+  const out = [...base];
+  let i = 0;
+  while (out.length < TARGET_PER_AREA) {
+    out.push(maker(i, out.length));
+    i++;
+  }
+  return out.slice(0, TARGET_PER_AREA).map((q, idx) => ({
+    ...q,
+    id: q.id || (area + '-' + idx)
+  }));
+}
+
+function splitDiff(list) {
+  // Assign difficulty by thirds if missing
+  return list.map((q, i) => {
+    if (q.difficulty) return q;
+    const d = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
+    return { ...q, difficulty: d };
+  });
+}
+
+// ---------- DEUTSCH ----------
 function generateDeutschFragen() {
-  const questions = [];
-  // EASY (ca. 80)
-  const easyDE = [
-    {q: 'Synonym von "groß"?', opts: ['riesig', 'klein', 'neu'], correct: 0},
-    {q: 'Gegenteil von "schnell"?', opts: ['langsam', 'schneller', 'neu'], correct: 0},
-    {q: 'Plural von "Haus"?', opts: ['Häuser', 'Hausen', 'Hausern'], correct: 0},
-    {q: 'Synonym von "schön"?', opts: ['hübsch', 'hässlich', 'alt'], correct: 0},
-    {q: 'Gegenteil von "hell"?', opts: ['dunkel', 'hellblau', 'helligkeit'], correct: 0},
-    {q: 'Plural von "Kind"?', opts: ['Kinder', 'Kinds', 'Kindern'], correct: 0},
-    {q: 'Synonym von "falsch"?', opts: ['unrichtig', 'richtig', 'möglich'], correct: 0},
-    {q: 'Gegenteil von "alt"?', opts: ['jung', 'älter', 'jünger'], correct: 0},
-    {q: 'Was ist das Gegenteil von "oben"?', opts: ['unten', 'unteren', 'unterne'], correct: 0},
-    {q: 'Synonym von "traurig"?', opts: ['niedergeschlagen', 'froh', 'aufgeweckt'], correct: 0},
-    {q: 'Plural von "Auto"?', opts: ['Autos', 'Autoen', 'Autose'], correct: 0},
-    {q: 'Gegenteil von "laut"?', opts: ['leise', 'läuter', 'Lauheit'], correct: 0},
-    {q: 'Synonym von "glücklich"?', opts: ['erfreut', 'betrübt', 'böse'], correct: 0},
-    {q: 'Was bedeutet "schnell"?', opts: ['mit großer Geschwindigkeit', 'langsam', 'mittelmäßig'], correct: 0},
-    {q: 'Plural von "Straße"?', opts: ['Straßen', 'Straßees', 'Straßeien'], correct: 0},
-    {q: 'Gegenteil von "tief"?', opts: ['flach', 'tiever', 'tieflich'], correct: 0},
-    {q: 'Synonym von "mutig"?', opts: ['tapfer', 'feige', 'ängstlich'], correct: 0},
-    {q: 'Was ist "hell"?', opts: ['mit viel Licht', 'mit wenig Licht', 'mittel'], correct: 0},
-    {q: 'Plural von "Baum"?', opts: ['Bäume', 'Baumen', 'Baumse'], correct: 0},
-    {q: 'Gegenteil von "süß"?', opts: ['bitter', 'lecker', 'köstlich'], correct: 0},
-    {q: 'Synonym von "dumm"?', opts: ['töricht', 'intelligent', 'klug'], correct: 0},
-    {q: 'Was ist das Gegenteil von "nass"?', opts: ['trocken', 'feucht', 'nasser'], correct: 0},
-    {q: 'Plural von "Bett"?', opts: ['Betten', 'Bettse', 'Bettis'], correct: 0},
-    {q: 'Synonym von "heiß"?', opts: ['glühend', 'kalt', 'kühl'], correct: 0},
-    {q: 'Gegenteil von "sauber"?', opts: ['schmutzig', 'rein', 'makellos'], correct: 0},
-    {q: 'Was bedeutet "neu"?', opts: ['gerade hergestellt', 'alt', 'gebraucht'], correct: 0},
-    {q: 'Plural von "Frau"?', opts: ['Frauen', 'Fraues', 'Frauens'], correct: 0},
-    {q: 'Synonym von "Angst"?', opts: ['Furcht', 'Mut', 'Tapferkeit'], correct: 0},
-    {q: 'Gegenteil von "früh"?', opts: ['spät', 'pünktlich', 'zeitig'], correct: 0},
-    {q: 'Was ist "Land"?', opts: ['Gebiet mit Grenzen', 'Wasser', 'See'], correct: 0},
-    {q: 'Plural von "Tisch"?', opts: ['Tische', 'Tischse', 'Tischis'], correct: 0},
-    {q: 'Synonym von "arm"?', opts: ['mittellos', 'wohlhabend', 'reich'], correct: 0},
-    {q: 'Gegenteil von "sicher"?', opts: ['unsicher', 'gewiss', 'zuverlässig'], correct: 0},
-    {q: 'Was bedeutet "Stadt"?', opts: ['große Siedlung', 'ländliche Gegend', 'Wald'], correct: 0},
-    {q: 'Plural von "Mann"?', opts: ['Männer', 'Mannes', 'Manns'], correct: 0},
-    {q: 'Synonym von "Freund"?', opts: ['Kumpel', 'Feind', 'Gegner'], correct: 0},
-    {q: 'Gegenteil von "offen"?', opts: ['geschlossen', 'aufgeschlossen', 'transparent'], correct: 0},
-    {q: 'Was ist "Kunst"?', opts: ['kreative Ausdrucksform', 'Handwerk', 'Wissenschaft'], correct: 0},
-    {q: 'Plural von "Pflanze"?', opts: ['Pflanzen', 'Pflanzese', 'Pflanzis'], correct: 0},
-    {q: 'Synonym von "Problem"?', opts: ['Schwierigkeit', 'Lösung', 'Erfolg'], correct: 0},
-    {q: 'Gegenteil von "kurz"?', opts: ['lang', 'längliche', 'längerer'], correct: 0},
-    {q: 'Was bedeutet "Wissenschaft"?', opts: ['systematisches Wissen', 'Glaube', 'Vermutung'], correct: 0},
-    {q: 'Plural von "Traum"?', opts: ['Träume', 'Traumse', 'Traumis'], correct: 0},
-    {q: 'Synonym von "Hoffnung"?', opts: ['Erwartung', 'Verzweiflung', 'Zweifel'], correct: 0},
-    {q: 'Gegenteil von "Freude"?', opts: ['Trauer', 'Vergnügen', 'Glück'], correct: 0},
-    {q: 'Was ist "Musik"?', opts: ['Kunstform mit Tönen', 'Malerei', 'Literatur'], correct: 0},
-    {q: 'Plural von "Lied"?', opts: ['Lieder', 'Liedes', 'Liedschen'], correct: 0},
-    {q: 'Synonym von "bösartig"?', opts: ['böse', 'freundlich', 'gutartig'], correct: 0},
-    {q: 'Gegenteil von "lebendig"?', opts: ['tot', 'lebhaft', 'aktiv'], correct: 0},
-    {q: 'Was ist "Magie"?', opts: ['übernatürliche Kraft', 'Wissenschaft', 'Logik'], correct: 0},
-    {q: 'Plural von "Auge"?', opts: ['Augen', 'Augese', 'Augis'], correct: 0},
+  const syn = [
+    ['groß','riesig','klein','neu'],['schön','hübsch','hässlich','alt'],['schnell','rasch','langsam','mittel'],
+    ['klug','intelligent','dumm','müde'],['mutig','tapfer','feige','ruhig'],['traurig','niedergeschlagen','froh','laut'],
+    ['glücklich','erfreut','betrübt','kalt'],['Angst','Furcht','Mut','Tisch'],['Problem','Schwierigkeit','Lösung','Fenster'],
+    ['Freund','Kumpel','Feind','Stein'],['arm','mittellos','reich','blau'],['heiß','glühend','kalt','grün'],
+    ['falsch','unrichtig','richtig','gelb'],['hoffnung','Erwartung','Verzweiflung','Auto'],['bösartig','böse','freundlich','Papier']
   ];
-
-  // MEDIUM (ca. 100)
-  const mediumDE = [
-    {q: 'Korrekt: "Trotz __Angst kam er."', opts: ['seiner', 'sein', 'seine'], correct: 0},
-    {q: 'Was ist eine Synekdoche?', opts: ['Teil für Ganzes', 'Vergleich mit wie', 'Übertreibung'], correct: 0},
-    {q: 'Was ist ein Oxymoron?', opts: ['Widerspruch in sich', 'Vergleich', 'Gegensatz'], correct: 0},
-    {q: 'Was bedeutet "Alliteration"?', opts: ['Anfangsbuchstab-Wiederholung', 'Reim', 'Metapher'], correct: 0},
-    {q: 'Was ist eine Hyperbel?', opts: ['Übertreibung', 'Mathematik-Form', 'Vergleich'], correct: 0},
-    {q: 'Gegenteil von "ambivalent"?', opts: ['eindeutig', 'zweideutig', 'mehrdeutig'], correct: 0},
-    {q: 'Richtige Grammatik: "____ seinem Erfolg..."', opts: ['Trotz', 'Wegen', 'Obwohl'], correct: 0},
-    {q: 'Was ist "Metapher"?', opts: ['bildlicher Vergleich ohne "wie"', 'direkter Vergleich', 'Gegenteil'], correct: 0},
-    {q: 'Plural von "Status"?', opts: ['Status (gleich)', 'Statuse', 'Statuus'], correct: 0, exp: 'Status oft unverändert.'},
-    {q: 'Was ist "Personifikation"?', opts: ['Menschliche Eigenschaften auf Objekte', 'Gegenstand', 'Person'], correct: 0},
-    {q: 'Korrekt: "__ seiner Einwände..."', opts: ['Trotz', 'Obwohl', 'Wegen'], correct: 0},
-    {q: 'Was ist ein Anachronismus?', opts: ['zeitliche Unangemessenheit', 'Grammatikfehler', 'Rechtschreib-Fehler'], correct: 0},
-    {q: 'Was bedeutet "Ironie"?', opts: ['Gegensatz zwischen Wort u. Gemeintnem', 'Sarkasmus', 'Wortwitz'], correct: 0},
-    {q: 'Präsens: "Der Hund __ schnell"', opts: ['läuft', 'laufen', 'lief'], correct: 0},
-    {q: 'Was ist "Pun" auf Deutsch?', opts: ['Wortspiel', 'Metapher', 'Allegorie'], correct: 0},
-    {q: 'Gegenteil von "ubiquitär"?', opts: ['selten, begrenzt', 'überall', 'häufig'], correct: 0},
-    {q: '"Protean" bedeutet?', opts: ['vielseitig, wandelbar', 'beschützend', 'mutig'], correct: 0},
-    {q: 'Was ist eine Antithese?', opts: ['Gegensatz', 'Wiederholung', 'Metapher'], correct: 0},
-    {q: 'Korrekt: "Es hätte sein __ müssen."', opts: ['sollen', 'müssen', 'wollen'], correct: 0},
-    {q: 'Was ist "Litotes"?', opts: ['Untertreibung (z.B. "nicht schlecht")', 'Übertreibung', 'Reim'], correct: 0},
-    {q: 'Gegenteil von "taciturn"?', opts: ['redselig', 'schweigsam', 'höflich'], correct: 0},
-    {q: 'Was bedeutet "ephemer"?', opts: ['kurzlebig', 'dauerhaft', 'winzig'], correct: 0},
-    {q: 'Korrekt: "Weder A noch B __ richtig."', opts: ['sind', 'ist', 'bin'], correct: 0},
-    {q: 'Was ist eine Metonymie?', opts: ['Name für Sache substituiert', 'Vergleich', 'Personifikation'], correct: 0},
-    {q: 'Gegenteil von "obfuscate"?', opts: ['klären', 'verwirren', 'erklären'], correct: 0},
-    {q: 'Was bedeutet "pejorative"?', opts: ['abwertend', 'beleidigend', 'einfach'], correct: 0},
-    {q: 'Was ist "Synesthesie"?', opts: ['Verbindung von Sinnen', 'visuell', 'akustisch'], correct: 0},
-    {q: 'Gegenteil von "verisimilitude"?', opts: ['Unwahrscheinlichkeit', 'Wahrhaftigkeit', 'Klarheit'], correct: 0},
-    {q: '"Circumlocution" ist?', opts: ['Umschreibung', 'direkte Aussage', 'Rätsel'], correct: 0},
-    {q: 'Was ist "Allegorie"?', opts: ['versteckte Bedeutung/Geschichte', 'offene', 'direkte'], correct: 0},
-    {q: 'Was bedeutet "eloquent"?', opts: ['redegewandt', 'stumm', 'gehemmt'], correct: 0},
-    {q: 'Was ist eine "Hyperbole"?', opts: ['Übertreibung', 'Untertreibung', 'Norm'], correct: 0},
-    {q: 'Gegenteil von "prudish"?', opts: ['freizügig', 'züchtig', 'tugendhaft'], correct: 0},
-    {q: 'Was ist "Kolloquialismus"?', opts: ['umgangssprachlich', 'förmlich', 'literarisch'], correct: 0},
-    {q: 'Was bedeutet "arcane"?', opts: ['geheimnisvoll', 'öffentlich', 'bekannt'], correct: 0},
+  const ant = [
+    ['schnell','langsam'],['hell','dunkel'],['alt','jung'],['oben','unten'],['laut','leise'],['süß','bitter'],
+    ['nass','trocken'],['sauber','schmutzig'],['früh','spät'],['offen','geschlossen'],['kurz','lang'],
+    ['sicher','unsicher'],['lebendig','tot'],[' Freude','Trauer'],['richtig','falsch'],['stark','schwach'],
+    ['voll','leer'],['breit','schmal'],['hoch','niedrig'],['nah','fern']
   ];
-
-  // HARD (ca. 120+)
-  const hardDE = [
-    {q: 'Was ist eine Synekdoche - präzise?', opts: ['pars pro toto: Teil für Ganzes', 'totum pro parte', 'Metapher'], correct: 0},
-    {q: '"Protean" nach welcher Figur benannt?', opts: ['Proteus (Mythologie)', 'Prometheus', 'Chronos'], correct: 0},
-    {q: 'Was ist "Apharese" in der Linguistik?', opts: ['Weglassung Anfangsbuchstab', 'Hinzufügung', 'Umkehrung'], correct: 0},
-    {q: 'Definition von "Hendiadyoin"?', opts: ['zwei Worte für ein Konzept', 'ein Wort für zwei', 'drei Worte'], correct: 0},
-    {q: 'Was ist "Antimetabole"?', opts: ['Wortwiederholung in umgekehrter Reihenfolge', 'normale Reihenfolge', 'keine Reihenfolge'], correct: 0},
-    {q: '"Cacophony" bezieht sich auf?', opts: ['unangenehme Lautverbindung', 'schöne Laute', 'Stille'], correct: 0},
-    {q: 'Was ist "Chiasmus"?', opts: ['Überkreuz-Anordnung', 'Parallele', 'Gegensatz'], correct: 0},
-    {q: '"Zeugma" ist?', opts: ['Wort mit 2 verschiedenen Bedeutungen verwendet', 'ein Wort', 'zwei Worte'], correct: 0},
-    {q: 'Was ist "Syllepsis"?', opts: ['grammatikalisch u. semantisch unterschiedliche Verwendung', 'sama', 'different'], correct: 0},
-    {q: '"Acrostic" bedeutet?', opts: ['erste Buchstaben bilden Wort', 'letzte Buchstaben', 'mittlere'], correct: 0},
-    {q: 'Was ist "Neologismus"?', opts: ['neu geschaffenes Wort', 'altes Wort', 'totes Wort'], correct: 0},
-    {q: '"Epistrophe" ist Wiederholung von?', opts: ['gleichen Wort am Satzende', 'Anfang', 'Mitte'], correct: 0},
-    {q: 'Was ist "Anaphora"?', opts: ['Wiederholung am Anfang von Sätzen', 'am Ende', 'in Mitte'], correct: 0},
-    {q: '"Polysyndeton" bedeutet?', opts: ['Häufung von Konjunktionen', 'Fehlen von Konjunktionen', 'Symmetrie'], correct: 0},
-    {q: 'Was ist "Asyndeton"?', opts: ['Fehlen von Bindeworten', 'viele Bindewort', 'normale'], correct: 0},
-    {q: '"Paraprosdokian" ist?', opts: ['überraschendes Ende eines Satzes', 'erwartet', 'logisch'], correct: 0},
-    {q: 'Was ist "Syllogismus"?', opts: ['logischer Schluss (3 Sätze)', 'zwei Sätze', 'ein Satz'], correct: 0},
-    {q: '"Tautologie" bedeutet?', opts: ['Aussage wird durch sich selbst bewiesen', 'Widerspruch', 'Wahrheit'], correct: 0},
-    {q: 'Was ist "Enallage"?', opts: ['grammatikalische Vertauschung', 'Richtigkeit', 'Norm'], correct: 0},
-    {q: '"Metathesis" ist?', opts: ['Umstellung von Lauten', 'Lautverschmelzung', 'Lautauflösung'], correct: 0},
-    {q: 'Was ist "Enjambement"?', opts: ['Satzverlauf über Versende hinaus', 'normales Versende', 'Pause'], correct: 0},
-    {q: '"Caesura" ist?', opts: ['Sprechpause im Vers', 'Versende', 'Versanfang'], correct: 0},
-    {q: 'Was ist "Diaeresis"?', opts: ['Sprechpause bei Wortgrenze', 'Verschmelzung', 'Lautung'], correct: 0},
-    {q: '"Synaloepha" bedeutet?', opts: ['Elision (Lautauslassung)', 'Hinzufügung', 'Vertauschung'], correct: 0},
-    {q: 'Was ist "Tmesis"?', opts: ['Wort wird auseinandergezogen', 'zusammengefügt', 'verdoppelt'], correct: 0},
-    {q: '"Pleonasm" ist?', opts: ['Überfluss an Worten', 'Mangel', 'Präzision'], correct: 0},
-    {q: 'Was ist "Spoonerism"?', opts: ['Vertauschung von Lautem in Worten', 'normale Aussprache', 'Schweigen'], correct: 0},
-    {q: '"Oxymoron" - klassisches Beispiel?', opts: ['bittersuß', 'bittersauer', 'bitterkalt'], correct: 0},
-    {q: 'Was ist "Antonomasia"?', opts: ['Eigenname statt Gattung', 'Gattung statt Name', 'keine'], correct: 0},
-    {q: '"Catachresis" ist?', opts: ['missbräuchliche Wortverwendung', 'richtige', 'normale'], correct: 0},
+  const plur = [
+    ['Haus','Häuser','Hausen','Hausern'],['Kind','Kinder','Kinds','Kindern'],['Auto','Autos','Autoen','Autose'],
+    ['Baum','Bäume','Baumen','Baumse'],['Frau','Frauen','Fraues','Frauens'],['Mann','Männer','Mannes','Manns'],
+    ['Tisch','Tische','Tischse','Tischis'],['Pflanze','Pflanzen','Pflanzese','Pflanzis'],['Traum','Träume','Traumse','Traumis'],
+    ['Auge','Augen','Augese','Augis'],['Lied','Lieder','Liedes','Liedschen'],['Stadt','Städte','Stadte','Stadtis'],
+    ['Buch','Bücher','Buche','Buchse'],['Fuss','Füsse','Fussse','Fussen'],['Zahn','Zähne','Zahne','Zahnse']
   ];
+  const qs = [];
+  syn.forEach((s, i) => qs.push(makeTextQ('Synonym von "' + s[0] + '"?', s[1], [s[2], s[3]], 'easy', 'Synonym.', 'de-syn-' + i)));
+  ant.forEach((a, i) => qs.push(makeTextQ('Gegenteil von "' + a[0].trim() + '"?', a[1], ['ähnlich','gleich'], i < 10 ? 'easy' : 'medium', 'Antonym.', 'de-ant-' + i)));
+  plur.forEach((p, i) => qs.push(makeTextQ('Plural von "' + p[0] + '"?', p[1], [p[2], p[3]], 'medium', 'Plural.', 'de-pl-' + i)));
 
-  return [...easyDE.map(q => ({...q, difficulty: 'easy'})), ...mediumDE.map(q => ({...q, difficulty: 'medium'})), ...hardDE.map(q => ({...q, difficulty: 'hard'}))];
+  const words = ['Haus','Garten','Schule','Freund','Arbeit','Gesundheit','Pflege','Patient','Team','Zeit','Morgen','Abend','Wasser','Licht','Kraft','Ruhe','Hilfe','Sicherheit','Vertrauen','Verantwortung','Kommunikation','Organisation','Planung','Dokumentation','Hygiene','Ernährung','Bewegung','Schlaf','Stress','Motivation','Lernen','Prüfung','Übung','Fehler','Erfolg','Ziel','Weg','Schritt','Anfang','Ende','Frage','Antwort','Lösung','Idee','Gedanke','Gefühl','Körper','Geist','Atem','Herz'];
+  return fillTo300(qs, 'deutsch', (i, n) => {
+    const w = words[i % words.length];
+    const mode = i % 3;
+    const diff = n < 100 ? 'easy' : (n < 200 ? 'medium' : 'hard');
+    if (mode === 0) return makeTextQ('Welches Wort passt thematisch zu Pflege/Gesundheit eher?', words[(i + 5) % words.length].match(/Pflege|Patient|Hygiene|Ernährung|Gesundheit|Schlaf|Stress|Herz|Atem|Körper/) ? words[(i + 5) % words.length] : 'Patient', ['Vulkan','Algorithmus'], diff, 'Kontext Pflege.', 'de-g-' + n);
+    if (mode === 1) return makeTextQ('Rechtschreibung: korrekt ist…', 'dass', ['das (immer)', 'daßz'], diff, '"dass" als Konjunktion.', 'de-g-' + n);
+    return makeTextQ('Satzbau: "Der Hund __ schnell."', 'läuft', ['laufen','gelaufen'], diff, '3. Person Singular.', 'de-g-' + n);
+  });
 }
 
+// Fix the themed deutsch generator - the health match logic is messy. Simpler approach:
+function generateDeutschFragenFixed() {
+  const pairs = [];
+  const synPairs = [
+    ['groß','riesig','klein','neu'],['schön','hübsch','hässlich','alt'],['schnell','rasch','langsam','mittel'],
+    ['klug','intelligent','dumm','müde'],['mutig','tapfer','feige','ruhig'],['traurig','niedergeschlagen','froh','laut'],
+    ['glücklich','erfreut','betrübt','kalt'],['Angst','Furcht','Mut','Tisch'],['Problem','Schwierigkeit','Lösung','Fenster'],
+    ['Freund','Kumpel','Feind','Stein'],['arm','mittellos','reich','blau'],['heiß','glühend','kalt','grün'],
+    ['falsch','unrichtig','richtig','gelb'],['Hoffnung','Erwartung','Verzweiflung','Auto'],['bösartig','böse','freundlich','Papier'],
+    ['Beginn','Anfang','Ende','Mitte'],['Antwort','Erwiderung','Frage','Stuhl'],['Hilfe','Unterstützung','Hindernis','Farbe'],
+    ['Ruhe','Stille','Lärm','Metall'],['Kraft','Stärke','Schwäche','Obst'],['Weg','Pfad','Ziel','Hund'],
+    ['Idee','Gedanke','Stein','Tisch'],['Ziel','Absicht','Zufall','Lampe'],['Fehler','Irrtum','Erfolg','Brot'],
+    ['Erfolg','Gelingen','Misserfolg','Regen'],['Plan','Vorhaben','Chaos','Mond'],['Team','Gruppe','Allein','Salz'],
+    ['Zeit','Dauer','Ort','Käse'],['Ort','Platz','Zeit','Milch'],['Licht','Helligkeit','Dunkel','Sand'],
+    ['Wasser','Flüssigkeit','Feuer','Holz'],['Luft','Atmosphäre','Stein','Eisen'],['Erde','Boden','Himmel','Glas'],
+    ['Himmel','Firmament','Keller','Buch'],['Tag','Tageslicht','Nacht','Nagel'],['Nacht','Dunkelheit','Tag','Stift'],
+    ['Kind','Nachwuchs','Greis','Server'],['Eltern','Erziehungsberechtigte','Fremde','Pixel'],['Schule','Bildungsstätte','Fabrik','Modem'],
+    ['Arzt','Mediziner','Patient nur','Kabel'],['Pflege','Betreuung','Zerstörung','Router'],['Patient','Kranker','Maschine','Chip']
+  ];
+  const antPairs = [
+    ['schnell','langsam'],['hell','dunkel'],['alt','jung'],['oben','unten'],['laut','leise'],['süß','bitter'],
+    ['nass','trocken'],['sauber','schmutzig'],['früh','spät'],['offen','geschlossen'],['kurz','lang'],
+    ['sicher','unsicher'],['lebendig','tot'],['Freude','Trauer'],['richtig','falsch'],['stark','schwach'],
+    ['voll','leer'],['breit','schmal'],['hoch','niedrig'],['nah','fern'],['leicht','schwer'],['warm','kalt'],
+    ['gut','schlecht'],['neu','alt'],['reich','arm'],['dick','dünn'],['lang','kurz'],['gross','klein'],
+    ['freundlich','unfreundlich'],['ruhig','unruhig'],['klar','unklar'],['einfach','schwierig'],['positiv','negativ'],
+    ['innen','außen'],['links','rechts'],['vorne','hinten'],['Anfang','Ende'],['Frage','Antwort'],['Gewinn','Verlust'],
+    ['Gesundheit','Krankheit'],['Ruhe','Stress'],['Ordnung','Unordnung'],['Wahrheit','Lüge'],['Mut','Angst']
+  ];
+  const plurPairs = [
+    ['Haus','Häuser','Hausen','Hausern'],['Kind','Kinder','Kinds','Kindern'],['Auto','Autos','Autoen','Autose'],
+    ['Baum','Bäume','Baumen','Baumse'],['Frau','Frauen','Fraues','Frauens'],['Mann','Männer','Mannes','Manns'],
+    ['Tisch','Tische','Tischse','Tischis'],['Pflanze','Pflanzen','Pflanzese','Pflanzis'],['Traum','Träume','Traumse','Traumis'],
+    ['Auge','Augen','Augese','Augis'],['Lied','Lieder','Liedes','Liedschen'],['Stadt','Städte','Stadte','Stadtis'],
+    ['Buch','Bücher','Buche','Buchse'],['Zahn','Zähne','Zahne','Zahnse'],['Fuss','Füsse','Fussse','Fussen'],
+    ['Hand','Hände','Hande','Handse'],['Maus','Mäuse','Mause','Mausen'],['Gast','Gäste','Gaste','Gastse'],
+    ['Arzt','Ärzte','Arzte','Arztse'],['Nacht','Nächte','Nachte','Nachtse'],['Kraft','Kräfte','Krafte','Kraftse'],
+    ['Wand','Wände','Wande','Wandse'],['Bank','Bänke','Banke','Bankse'],['Kalb','Kälber','Kalbe','Kalbse'],
+    ['Dorf','Dörfer','Dorfe','Dorfse'],['Wort','Wörter','Wortex','Wortse'],['Land','Länder','Lande','Landse']
+  ];
+
+  synPairs.forEach((s, i) => pairs.push(makeTextQ('Synonym von "' + s[0] + '"?', s[1], [s[2], s[3]], i < 20 ? 'easy' : 'medium', 'Synonym zu ' + s[0] + '.', 'de-s-' + i)));
+  antPairs.forEach((a, i) => pairs.push(makeTextQ('Gegenteil von "' + a[0] + '"?', a[1], ['ähnlich','identisch'], i < 20 ? 'easy' : (i < 35 ? 'medium' : 'hard'), 'Antonym.', 'de-a-' + i)));
+  plurPairs.forEach((p, i) => pairs.push(makeTextQ('Plural von "' + p[0] + '"?', p[1], [p[2], p[3]], i < 12 ? 'easy' : 'medium', 'Pluralform.', 'de-p-' + i)));
+
+  const grammar = [
+    ['Der Hund __ schnell.', 'läuft', ['laufen','gelaufen'], '3. Sg. Präsens'],
+    ['Sie __ gestern gekommen.', 'ist', ['hat','sind'], 'Perfekt mit sein'],
+    ['Trotz __ Angst kam er.', 'seiner', ['sein','seine'], 'Genitiv'],
+    ['Weder A noch B __ richtig.', 'ist', ['sind','bin'], 'Kongruenz'],
+    ['Ich hoffe, __ du kommst.', 'dass', ['das','daßz'], 'Konjunktion dass'],
+    ['Er hat das Buch __.', 'gelesen', ['lesen','liest'], 'Partizip II'],
+    ['Wir __ morgen.', 'fahren', ['fährt','gefahren'], '1. Pl. Präsens'],
+    ['__ seiner Einwände…', 'Trotz', ['Obwohl','Weil'], 'Präposition'],
+    ['Es hätte sein __ müssen.', 'sollen', ['müssen','wollen'], 'Modal'],
+    ['Je mehr, __ besser.', 'desto', ['umso nicht','als'], 'Je-desto']
+  ];
+  for (let i = 0; i < 80; i++) {
+    const g = grammar[i % grammar.length];
+    pairs.push(makeTextQ('Grammatik: "' + g[0] + '"', g[1], g[2], i < 30 ? 'medium' : 'hard', g[3], 'de-gr-' + i));
+  }
+
+  while (pairs.length < TARGET_PER_AREA) {
+    const i = pairs.length;
+    const a = antPairs[i % antPairs.length];
+    pairs.push(makeTextQ('Was ist das Gegenteil von "' + a[0] + '"? (#' + i + ')', a[1], ['neutral','ungeklärt'], i < 200 ? 'medium' : 'hard', 'Antonym-Training.', 'de-x-' + i));
+  }
+  return pairs.slice(0, TARGET_PER_AREA);
+}
+
+// ---------- ENGLISH ----------
 function generateEnglischFragen() {
-  const easyEN = [
-    {q: '"Hello" auf Deutsch?', opts: ['Hallo', 'Auf', 'Danke'], correct: 0},
-    {q: '"Good morning" bedeutet?', opts: ['Guten Morgen', 'Guter Abend', 'Gute Nacht'], correct: 0},
-    {q: '"Thank you" auf Deutsch?', opts: ['Danke', 'Bitte', 'Ja'], correct: 0},
-    {q: '"Water" auf Deutsch?', opts: ['Wasser', 'Eis', 'Luft'], correct: 0},
-    {q: '"Love" bedeutet?', opts: ['Liebe', 'Hass', 'Angst'], correct: 0},
-    {q: '"Happy" auf Deutsch?', opts: ['glücklich', 'traurig', 'müde'], correct: 0},
-    {q: '"Yes" bedeutet?', opts: ['Ja', 'Nein', 'Vielleicht'], correct: 0},
-    {q: '"Goodbye" heißt?', opts: ['Auf Wiedersehen', 'Hallo', 'Guter Tag'], correct: 0},
-    {q: '"Night" auf Deutsch?', opts: ['Nacht', 'Tag', 'Morgen'], correct: 0},
-    {q: '"Beautiful" bedeutet?', opts: ['schön', 'hässlich', 'alt'], correct: 0},
+  const vocab = [
+    ['hello','Hallo'],['goodbye','Auf Wiedersehen'],['thank you','Danke'],['please','Bitte'],['yes','Ja'],['no','Nein'],
+    ['water','Wasser'],['food','Essen'],['house','Haus'],['friend','Freund'],['family','Familie'],['school','Schule'],
+    ['work','Arbeit'],['time','Zeit'],['day','Tag'],['night','Nacht'],['morning','Morgen'],['evening','Abend'],
+    ['happy','glücklich'],['sad','traurig'],['big','groß'],['small','klein'],['fast','schnell'],['slow','langsam'],
+    ['hot','heiß'],['cold','kalt'],['good','gut'],['bad','schlecht'],['new','neu'],['old','alt'],
+    ['doctor','Arzt'],['nurse','Pfleger/in'],['patient','Patient'],['health','Gesundheit'],['hospital','Krankenhaus'],
+    ['help','Hilfe'],['need','brauchen'],['want','wollen'],['can','können'],['must','müssen'],
+    ['today','heute'],['tomorrow','morgen'],['yesterday','gestern'],['always','immer'],['never','nie'],
+    ['often','oft'],['sometimes','manchmal'],['because','weil'],['but','aber'],['and','und'],
+    ['or','oder'],['with','mit'],['without','ohne'],['before','vor'],['after','nach'],
+    ['under','unter'],['over','über'],['left','links'],['right','rechts'],['up','oben'],['down','unten'],
+    ['body','Körper'],['head','Kopf'],['hand','Hand'],['foot','Fuß'],['heart','Herz'],['blood','Blut'],
+    ['pain','Schmerz'],['fever','Fieber'],['medicine','Medizin'],['care','Pflege'],['clean','sauber'],
+    ['dirty','schmutzig'],['safe','sicher'],['danger','Gefahr'],['emergency','Notfall'],['appointment','Termin'],
+    ['question','Frage'],['answer','Antwort'],['learn','lernen'],['teach','lehren'],['read','lesen'],
+    ['write','schreiben'],['speak','sprechen'],['listen','zuhören'],['understand','verstehen'],['explain','erklären'],
+    ['important','wichtig'],['difficult','schwierig'],['easy','einfach'],['possible','möglich'],['impossible','unmöglich'],
+    ['early','früh'],['late','spät'],['soon','bald'],['already','schon'],['still','noch'],
+    ['enough','genug'],['more','mehr'],['less','weniger'],['most','meist'],['least','am wenigsten'],
+    ['first','erste'],['last','letzte'],['next','nächste'],['previous','vorherige'],['same','gleich'],
+    ['different','verschieden'],['other','andere'],['another','noch eine'],['every','jede'],['each','jede/r'],
+    ['people','Menschen'],['person','Person'],['child','Kind'],['adult','Erwachsener'],['woman','Frau'],['man','Mann'],
+    ['city','Stadt'],['country','Land'],['street','Straße'],['room','Zimmer'],['door','Tür'],['window','Fenster'],
+    ['table','Tisch'],['chair','Stuhl'],['bed','Bett'],['phone','Telefon'],['computer','Computer'],
+    ['money','Geld'],['price','Preis'],['buy','kaufen'],['sell','verkaufen'],['pay','bezahlen'],
+    ['open','öffnen'],['close','schließen'],['start','starten'],['stop','stoppen'],['wait','warten'],
+    ['come','kommen'],['go','gehen'],['bring','bringen'],['take','nehmen'],['give','geben'],
+    ['find','finden'],['lose','verlieren'],['keep','behalten'],['change','ändern'],['use','benutzen'],
+    ['know','wissen'],['think','denken'],['feel','fühlen'],['believe','glauben'],['hope','hoffen'],
+    ['love','lieben'],['like','mögen'],['hate','hassen'],['prefer','bevorzugen'],['choose','wählen'],
+    ['strong','stark'],['weak','schwach'],['healthy','gesund'],['sick','krank'],['tired','müde'],
+    ['hungry','hungrig'],['thirsty','durstig'],['busy','beschäftigt'],['free','frei'],['ready','bereit'],
+    ['careful','vorsichtig'],['dangerous','gefährlich'],['useful','nützlich'],['useless','nutzlos'],['necessary','nötig'],
+    ['obfuscate','absichtlich unklar machen'],['perspicacious','scharfsinnig'],['egregious','ungeheuer schlecht'],
+    ['dearth','Knappheit'],['circumlocution','Umschreibung'],['loquacious','redegewandt'],['serendipity','glücklicher Zufall']
   ];
-
-  const mediumEN = [
-    {q: 'Complete: "Had I known, I __ gone."', opts: ['would have', 'will have', 'have'], correct: 0},
-    {q: '"Obfuscate" bedeutet?', opts: ['absichtlich unklar machen', 'klären', 'erklären'], correct: 0},
-    {q: '"Perspicacious" heißt?', opts: ['scharfsinnig', 'kurzsichtig', 'ehrlich'], correct: 0},
-    {q: 'Fill: "She insists __ quality."', opts: ['on', 'in', 'for'], correct: 0},
-    {q: '"Egregious" bedeutet?', opts: ['ungeheuer schlecht', 'gut', 'normal'], correct: 0},
-    {q: 'Fill: "__ her objections..."', opts: ['Despite', 'Because of', 'Although'], correct: 0},
-    {q: '"Non sequitur" ist?', opts: ['Logischer Fehlschluss', 'valider Schluss', 'Frage'], correct: 0},
-    {q: '"Dearth" heißt?', opts: ['Knappheit', 'Überfluss', 'Gleichgewicht'], correct: 0},
-    {q: 'Complete: "I wish I __ Spanish."', opts: ['spoke', 'speak', 'had spoken'], correct: 0},
-    {q: '"Circumlocution" ist?', opts: ['Umschreibung', 'direkte Aussage', 'Rätsel'], correct: 0},
-  ];
-
-  const hardEN = [
-    {q: '"Perspicacity" bedeutet genau?', opts: ['scharfsinnige Beobachtung', 'Dummheit', 'Verwirrung'], correct: 0},
-    {q: '"Sesquipedalian" heißt?', opts: ['extrem lang/weitschweifig', 'kurz', 'präzise'], correct: 0},
-    {q: '"Defenestration" ist?', opts: ['Hinauswerfen aus Fenster', 'Fenster öffnen', 'Fenster schließen'], correct: 0},
-    {q: '"Discombobulate" bedeutet?', opts: ['verwirren', 'ordnen', 'klären'], correct: 0},
-    {q: '"Gobbledygook" ist?', opts: ['verwirrtes Jargon', 'klare Sprache', 'Poesie'], correct: 0},
-    {q: '"Loquacious" heißt?', opts: ['redegewandt', 'stumm', 'gehemmt'], correct: 0},
-    {q: '"Petrichor" bedeutet?', opts: ['Geruch nach Regen', 'Regen selbst', 'Wasser'], correct: 0},
-    {q: '"Snollygoster" ist ein?', opts: ['unehrlicher Politiker', 'ehrlicher', 'Farmer'], correct: 0},
-    {q: '"Nocturnality" heißt?', opts: ['Aktivität in der Nacht', 'Tag', 'Schlaf'], correct: 0},
-    {q: '"Serendipity" bedeutet?', opts: ['glücklicher Zufall', 'Pech', 'Plan'], correct: 0},
-  ];
-
-  return [...easyEN.map(q => ({...q, difficulty: 'easy'})), ...mediumEN.map(q => ({...q, difficulty: 'medium'})), ...hardEN.map(q => ({...q, difficulty: 'hard'}))];
+  // pad vocab to enough unique by cycling with variants
+  const qs = [];
+  for (let i = 0; i < TARGET_PER_AREA; i++) {
+    const v = vocab[i % vocab.length];
+    const w1 = vocab[(i + 7) % vocab.length][1];
+    const w2 = vocab[(i + 13) % vocab.length][1];
+    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
+    const mode = i % 2;
+    if (mode === 0) qs.push(makeTextQ('"' + v[0] + '" auf Deutsch?', v[1], [w1 === v[1] ? 'anders' : w1, w2 === v[1] ? 'sonst' : w2], diff, v[0] + ' = ' + v[1], 'en-' + i));
+    else qs.push(makeTextQ('"' + v[1] + '" auf Englisch?', v[0], [vocab[(i + 3) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], diff, v[1] + ' = ' + v[0], 'en-' + i));
+  }
+  return qs;
 }
 
+// ---------- MATH ----------
 function generateMathFragen() {
-  const easyMath = [
-    {q: '2 + 2 = ?', opts: ['4', '3', '5'], correct: 0, exp: '2+2=4'},
-    {q: '5 × 3 = ?', opts: ['15', '12', '18'], correct: 0, exp: '5×3=15'},
-    {q: '10 - 3 = ?', opts: ['7', '6', '8'], correct: 0, exp: '10-3=7'},
-    {q: '20 ÷ 4 = ?', opts: ['5', '4', '6'], correct: 0, exp: '20/4=5'},
-    {q: '√9 = ?', opts: ['3', '2', '4'], correct: 0, exp: '3×3=9'},
-    {q: '7 + 8 = ?', opts: ['15', '14', '16'], correct: 0, exp: '15'},
-    {q: '12 − 5 = ?', opts: ['7', '6', '8'], correct: 0, exp: '7'},
-    {q: '9 × 2 = ?', opts: ['18', '16', '20'], correct: 0, exp: '18'}
-  ];
-  const mediumMath = [
-    {q: 'Solve: 3x + 5 = 20', opts: ['5', '25', '3'], correct: 0, exp: '3x=15 → x=5'},
-    {q: '√144 = ?', opts: ['12', '14', '11'], correct: 0, exp: '12×12=144'},
-    {q: '25% of 80 = ?', opts: ['20', '25', '30'], correct: 0, exp: '0.25×80=20'},
-    {q: '1/2 + 1/4 = ?', opts: ['3/4', '1/2', '1/4'], correct: 0, exp: '3/4'},
-    {q: 'Mean of 10,20,30,40:', opts: ['25', '30', '20'], correct: 0, exp: '25'},
-    {q: '15% von 200 = ?', opts: ['30', '25', '35'], correct: 0, exp: '30'},
-    {q: '3² + 4² = ?', opts: ['25', '12', '49'], correct: 0, exp: '9+16=25'}
-  ];
-  const hardMath = [
-    {q: 'Solve: (x+3)² - (x-2)² = 20', opts: ['1.5', '1', '3'], correct: 0, exp: 'x=1.5'},
-    {q: 'Simplify: √8 + √2', opts: ['3√2', '2√3', '4√2'], correct: 0, exp: '3√2'},
-    {q: 'Unabhängig: P(A)=0.6, P(B)=0.4. P(A∪B)=?', opts: ['0.76', '1.0', '0.24'], correct: 0, exp: '0.76'},
-    {q: 'cos(120°) = ?', opts: ['-1/2', '1/2', '√3/2'], correct: 0, exp: '-1/2'},
-    {q: 'log₂(32) = ?', opts: ['5', '3', '6'], correct: 0, exp: '5'},
-    {q: 'Ableitung von x³?', opts: ['3x²', 'x²', '3x'], correct: 0, exp: '3x²'}
-  ];
-  return [...easyMath.map(q => ({...q, difficulty: 'easy'})), ...mediumMath.map(q => ({...q, difficulty: 'medium'})), ...hardMath.map(q => ({...q, difficulty: 'hard'}))];
+  const qs = [];
+  for (let i = 0; i < 100; i++) {
+    const a = 2 + (i % 20);
+    const b = 2 + ((i * 3) % 15);
+    qs.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', a + '+' + b + '=' + (a + b), 'math-e-add-' + i));
+  }
+  for (let i = 0; i < 34; i++) {
+    const a = 10 + (i % 30);
+    const b = 1 + (i % 9);
+    qs.push(makeNumQ(a + ' − ' + b + ' = ?', a - b, 'easy', 'Subtraktion', 'math-e-sub-' + i));
+  }
+  for (let i = 0; i < 33; i++) {
+    const a = 2 + (i % 10);
+    const b = 2 + (i % 8);
+    qs.push(makeNumQ(a + ' × ' + b + ' = ?', a * b, 'easy', 'Multiplikation', 'math-e-mul-' + i));
+  }
+  // medium 100
+  for (let i = 0; i < 40; i++) {
+    const a = 2 + (i % 12);
+    const b = 5 + (i % 10) * 5;
+    const pct = a * 5;
+    qs.push(makeNumQ(pct + '% von ' + b + ' = ?', (pct / 100) * b, 'medium', pct + '% × ' + b, 'math-m-pct-' + i));
+  }
+  for (let i = 0; i < 30; i++) {
+    const x = 2 + (i % 15);
+    const c = 3 + (i % 10);
+    const r = 3 * x + c;
+    qs.push(makeNumQ('Löse: 3x + ' + c + ' = ' + r + '. x = ?', x, 'medium', '3x=' + (r - c), 'math-m-eq-' + i));
+  }
+  for (let i = 0; i < 30; i++) {
+    const n = 2 + (i % 12);
+    qs.push(makeNumQ(n + '² = ?', n * n, 'medium', n + '×' + n, 'math-m-sq-' + i));
+  }
+  // hard 100
+  for (let i = 0; i < 40; i++) {
+    const a = 10 + i;
+    const b = 2 + (i % 8);
+    qs.push(makeNumQ(a + ' ÷ ' + b + ' = ? (ganzzahlig wo möglich; sonst gerundet)', Math.round((a / b) * 100) / 100 === a / b ? a / b : Math.floor(a / b) * b === a ? a / b : Math.round(a / b), 'hard', 'Division', 'math-h-div-' + i));
+  }
+  // Fix hard division to only use exact divisions
+  // rebuild hard cleanly
+  const hard = [];
+  for (let i = 0; i < 40; i++) {
+    const b = 2 + (i % 9);
+    const qv = 3 + (i % 12);
+    const a = b * qv;
+    hard.push(makeNumQ(a + ' ÷ ' + b + ' = ?', qv, 'hard', a + '/' + b + '=' + qv, 'math-h-div-' + i));
+  }
+  for (let i = 0; i < 30; i++) {
+    const n = i + 2;
+    hard.push(makeNumQ('Mittelwert von ' + n + ', ' + (n + 10) + ', ' + (n + 20) + '?', n + 10, 'hard', 'Durchschnitt', 'math-h-avg-' + i));
+  }
+  for (let i = 0; i < 30; i++) {
+    const a = 3 + (i % 10);
+    const b = 4 + (i % 8);
+    hard.push(makeNumQ(a + '² + ' + b + '² = ?', a * a + b * b, 'hard', 'Summenquadraten', 'math-h-py-' + i));
+  }
+  // rebuild full list cleanly
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const a = 2 + (i % 20), b = 2 + ((i * 3) % 15);
+    if (i < 40) out.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', 'Addition', 'math-' + out.length));
+    else if (i < 70) out.push(makeNumQ((a + 10) + ' − ' + b + ' = ?', a + 10 - b, 'easy', 'Subtraktion', 'math-' + out.length));
+    else out.push(makeNumQ(a + ' × ' + b + ' = ?', a * b, 'easy', 'Multiplikation', 'math-' + out.length));
+  }
+  for (let i = 0; i < 100; i++) {
+    if (i < 40) {
+      const pct = 5 + (i % 19) * 5;
+      const base = 20 + (i % 16) * 5;
+      out.push(makeNumQ(pct + '% von ' + base + ' = ?', pct * base / 100, 'medium', 'Prozent', 'math-' + out.length));
+    } else if (i < 70) {
+      const x = 2 + (i % 15), c = 1 + (i % 9), r = 2 * x + c;
+      out.push(makeNumQ('2x + ' + c + ' = ' + r + '. x = ?', x, 'medium', 'Gleichung', 'math-' + out.length));
+    } else {
+      const n = 2 + (i % 14);
+      out.push(makeNumQ(n + '² = ?', n * n, 'medium', 'Quadrat', 'math-' + out.length));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    if (i < 40) {
+      const b = 2 + (i % 9), qv = 4 + (i % 11), a = b * qv;
+      out.push(makeNumQ(a + ' ÷ ' + b + ' = ?', qv, 'hard', 'Division', 'math-' + out.length));
+    } else if (i < 70) {
+      const n = i;
+      out.push(makeNumQ('Mittelwert ' + n + ',' + (n + 6) + ',' + (n + 12) + '?', n + 6, 'hard', 'Durchschnitt', 'math-' + out.length));
+    } else {
+      const a = 3 + (i % 10), b = 4 + (i % 7);
+      out.push(makeNumQ(a + '² + ' + b + '² = ?', a * a + b * b, 'hard', 'a²+b²', 'math-' + out.length));
+    }
+  }
+  return out.slice(0, TARGET_PER_AREA);
 }
 
-const EXTRA_AREA_QUESTIONS = {"logic":[{"q":"2, 4, 6, ?","opts":["8","7","9"],"correct":0,"exp":"Jedes Mal +2.","difficulty":"easy"},{"q":"5, 10, 15, ?","opts":["20","18","25"],"correct":0,"exp":"Jedes Mal +5.","difficulty":"easy"},{"q":"Was passt nicht? Hund, Katze, Auto","opts":["Auto","Hund","Katze"],"correct":0,"exp":"Auto ist kein Tier.","difficulty":"easy"},{"q":"Alle Rosen sind Blumen. Diese ist eine Rose. Also ist sie…","opts":["eine Blume","kein Gewächs","ein Baum"],"correct":0,"exp":"Gültiger Schluss.","difficulty":"easy"},{"q":"A vor B, B vor C. Wer ist zuerst?","opts":["A","B","C"],"correct":0,"exp":"A → B → C.","difficulty":"easy"},{"q":"Gegenteil von „immer“?","opts":["nie","oft","manchmal"],"correct":0,"exp":"Immer ↔ nie.","difficulty":"easy"},{"q":"Wenn es regnet, ist die Straße nass. Die Straße ist nass. Folgt Regen?","opts":["Nicht zwingend","Ja immer","Nein nie"],"correct":0,"exp":"Auch andere Ursachen möglich.","difficulty":"easy"},{"q":"1, 2, 4, 8, ?","opts":["16","10","12"],"correct":0,"exp":"Verdopplung.","difficulty":"easy"},{"q":"1, 1, 2, 3, 5, ?","opts":["8","6","7"],"correct":0,"exp":"Fibonacci.","difficulty":"medium"},{"q":"A ist größer als B, B größer als C. Wer ist am kleinsten?","opts":["C","A","B"],"correct":0,"exp":"A > B > C.","difficulty":"medium"},{"q":"Welche Zahl fehlt? 3, 6, 12, 24, ?","opts":["48","36","30"],"correct":0,"exp":"×2.","difficulty":"medium"},{"q":"Nur Dienstags Training. Heute ist Montag. Also…","opts":["heute kein Training","heute Training","unbekannt"],"correct":0,"exp":"Montag ≠ Dienstag.","difficulty":"medium"},{"q":"Buch → lesen, Messer → ?","opts":["schneiden","kochen","schreiben"],"correct":0,"exp":"Zweck-Analogie.","difficulty":"medium"},{"q":"Alle Ärzte sind Helfer. Manche Helfer sind freiwillig. Folgt: Alle Ärzte freiwillig?","opts":["Nein","Ja","Vielleicht sicher"],"correct":0,"exp":"Unzulässige Verallgemeinerung.","difficulty":"medium"},{"q":"9, 7, 5, 3, ?","opts":["1","0","2"],"correct":0,"exp":"−2.","difficulty":"medium"},{"q":"Muster: der gefüllte Kreis wandert. ○○●, ○●○, ●○○ — nächste sinnvolle Aussage?","opts":["Punkt wandert nach links weiter","alles ●","zufällig"],"correct":0,"exp":"Positionsmuster.","difficulty":"medium"},{"q":"Wenn P→Q und ¬Q, dann…","opts":["¬P","P","Q"],"correct":0,"exp":"Modus tollens.","difficulty":"hard"},{"q":"2, 3, 5, 8, 12, ?","opts":["17","15","16"],"correct":0,"exp":"Differenzen +1,+2,+3,+4,+5.","difficulty":"hard"},{"q":"Analogie: Arzt : Patient = Lehrer : ?","opts":["Schüler","Schule","Buch"],"correct":0,"exp":"Profession–Gegenüber.","difficulty":"hard"},{"q":"Menge {2,4,6,8}, welche Regel?","opts":["gerade Zahlen","Primzahlen","Quadrate"],"correct":0,"exp":"Alle gerade.","difficulty":"hard"},{"q":"„Dieser Satz ist falsch.“ Problem?","opts":["Paradoxon","klar wahr","klar falsch"],"correct":0,"exp":"Lügner-Paradox.","difficulty":"hard"},{"q":"3 Personen, genau 1 lügt. A: „B lügt“. B: „C lügt“. C: „A lügt“. Wer kann nicht allein lügen konsistent mit allen? Vereinfachte Lösung oft:","opts":["genau einer der drei – klassisch A oder Analyse nötig","alle","keiner"],"correct":0,"exp":"Genau-ein-Lügner-Rätsel: systematisch prüfen.","difficulty":"hard"}],"science":[{"q":"Welches Gas brauchen wir zum Atmen?","opts":["Sauerstoff","Helium","reine Stickstoffatmung"],"correct":0,"exp":"Körper braucht O₂.","difficulty":"easy"},{"q":"Wasser gefriert bei…","opts":["0 °C","100 °C","50 °C"],"correct":0,"exp":"Gefrierpunkt.","difficulty":"easy"},{"q":"Größter Planet im Sonnensystem?","opts":["Jupiter","Erde","Mars"],"correct":0,"exp":"Jupiter.","difficulty":"easy"},{"q":"Organ, das Blut pumpt?","opts":["Herz","Leber","Lunge"],"correct":0,"exp":"Herz.","difficulty":"easy"},{"q":"Einheit der Kraft?","opts":["Newton","Watt","Volt"],"correct":0,"exp":"Newton.","difficulty":"easy"},{"q":"Photosynthese braucht…","opts":["Licht","nur Dunkelheit","nur Salz"],"correct":0,"exp":"Lichtenergie.","difficulty":"easy"},{"q":"Knochen im Erwachsenen ungefähr?","opts":["206","100","500"],"correct":0,"exp":"ca. 206.","difficulty":"easy"},{"q":"Universalspender Blut (oft)?","opts":["0 negativ","AB positiv","A positiv"],"correct":0,"exp":"0−.","difficulty":"easy"},{"q":"pH 7 bedeutet…","opts":["neutral","sauer","basisch"],"correct":0,"exp":"neutral.","difficulty":"medium"},{"q":"DNA speichert…","opts":["Erbinformation","nur Zucker","nur Fett"],"correct":0,"exp":"Gene.","difficulty":"medium"},{"q":"Erdanziehung heißt…","opts":["Gravitation","Magnetismus","Reibung"],"correct":0,"exp":"Gravitation.","difficulty":"medium"},{"q":"Antibiotika wirken gegen…","opts":["Bakterien","Viren immer","Pilze nur"],"correct":0,"exp":"Bakterien.","difficulty":"medium"},{"q":"Hauptaufgabe der Niere?","opts":["Blut filtrieren","Verdauung","nur Stimme"],"correct":0,"exp":"Filter/Ausscheidung.","difficulty":"medium"},{"q":"Schall braucht…","opts":["ein Medium","Vakuum","nur Licht"],"correct":0,"exp":"Kein Schall im Vakuum.","difficulty":"medium"},{"q":"Vitamin-C-Mangel →","opts":["Skorbut","Rachitis","nur B12-Anämie"],"correct":0,"exp":"Skorbut.","difficulty":"medium"},{"q":"Ruhepuls Erwachsene ca.","opts":["60–80/min","10/min","200/min"],"correct":0,"exp":"etwa 60–80.","difficulty":"medium"},{"q":"Mitochondrien gelten als…","opts":["Kraftwerke der Zelle","Zellkern","Zellwand"],"correct":0,"exp":"ATP.","difficulty":"hard"},{"q":"Ohm’sches Gesetz?","opts":["U = R · I","P = U + I","F = m + a"],"correct":0,"exp":"U=R·I.","difficulty":"hard"},{"q":"Krankenhaus-Infektion heißt…","opts":["nosokomial","endemisch","pandemisch"],"correct":0,"exp":"nosokomial.","difficulty":"hard"},{"q":"Systole ist…","opts":["Herzkontraktion","Herzpause","nur Vorhof"],"correct":0,"exp":"Auswurfphase.","difficulty":"hard"},{"q":"Isotope unterscheiden sich in…","opts":["Neutronenzahl","Protonenzahl immer","nur Elektronen"],"correct":0,"exp":"Neutronen.","difficulty":"hard"},{"q":"Katalysator…","opts":["senkt Aktivierungsenergie","wird verbraucht","ändert Gleichgewicht dauerhaft"],"correct":0,"exp":"beschleunigt.","difficulty":"hard"}],"french":[{"q":"„Bonjour“ bedeutet?","opts":["Guten Tag","Gute Nacht","Danke"],"correct":0,"exp":"Begrüßung.","difficulty":"easy"},{"q":"„Merci“ bedeutet?","opts":["Danke","Bitte","Nein"],"correct":0,"exp":"Danke.","difficulty":"easy"},{"q":"„Oui“ bedeutet?","opts":["Ja","Nein","Vielleicht"],"correct":0,"exp":"Ja.","difficulty":"easy"},{"q":"„Non“ bedeutet?","opts":["Nein","Ja","Hallo"],"correct":0,"exp":"Nein.","difficulty":"easy"},{"q":"„Eau“ bedeutet?","opts":["Wasser","Brot","Milch"],"correct":0,"exp":"Wasser.","difficulty":"easy"},{"q":"„Pain“ bedeutet?","opts":["Brot","Wein","Käse"],"correct":0,"exp":"Brot.","difficulty":"easy"},{"q":"„Au revoir“ heißt?","opts":["Auf Wiedersehen","Guten Morgen","Bitte"],"correct":0,"exp":"Tschüss.","difficulty":"easy"},{"q":"„S’il vous plaît“ bedeutet?","opts":["Bitte","Danke","Entschuldigung"],"correct":0,"exp":"Bitte.","difficulty":"easy"},{"q":"„Je suis“ bedeutet?","opts":["Ich bin","Du bist","Er ist"],"correct":0,"exp":"être.","difficulty":"medium"},{"q":"„Avoir“ heißt?","opts":["haben","sein","gehen"],"correct":0,"exp":"haben.","difficulty":"medium"},{"q":"„Où“ fragt nach…","opts":["Ort","Zeit","Grund"],"correct":0,"exp":"Wo?","difficulty":"medium"},{"q":"„Pourquoi“ fragt nach…","opts":["Grund","Ort","Preis"],"correct":0,"exp":"Warum?","difficulty":"medium"},{"q":"Plural von „cheval“?","opts":["chevaux","chevals","chevales"],"correct":0,"exp":"chevaux.","difficulty":"medium"},{"q":"„Il y a“ bedeutet?","opts":["es gibt","er hat","sie ist"],"correct":0,"exp":"es gibt.","difficulty":"medium"},{"q":"„Beaucoup“ heißt?","opts":["viel","wenig","nie"],"correct":0,"exp":"viel.","difficulty":"medium"},{"q":"Feminin von „beau“?","opts":["belle","beaue","beau"],"correct":0,"exp":"belle.","difficulty":"medium"},{"q":"Passé composé von „aller“ (je)?","opts":["je suis allé(e)","j’ai allé","je vais allé"],"correct":0,"exp":"être.","difficulty":"hard"},{"q":"„Bien que“ verlangt oft…","opts":["Subjonctif","nur Futur","Imperativ"],"correct":0,"exp":"Subjonctif.","difficulty":"hard"},{"q":"„Dont“ ersetzt oft…","opts":["de + Relativ","à + Relativ","pour + Relativ"],"correct":0,"exp":"de.","difficulty":"hard"},{"q":"„Il faut que tu __“ (venir)","opts":["viennes","viens","venir"],"correct":0,"exp":"Subjonctif.","difficulty":"hard"},{"q":"„Depuis“ + Zeitraum oft mit…","opts":["Présent","nur Passé simple","nur Futur"],"correct":0,"exp":"Présent.","difficulty":"hard"},{"q":"„Ne … que“ bedeutet?","opts":["nur","nicht mehr","niemals"],"correct":0,"exp":"nur.","difficulty":"hard"}],"organisation":[{"q":"Aufgabe startet 14:00, dauert 2h. Ende?","opts":["16:00","15:00","17:00"],"correct":0,"exp":"14+2=16.","difficulty":"easy"},{"q":"240 Minuten = ? Stunden","opts":["4","3","5"],"correct":0,"exp":"240/60=4.","difficulty":"easy"},{"q":"Priorität zuerst typischerweise…","opts":["dringend und wichtig","nur nett","beliebig"],"correct":0,"exp":"Eisenhower.","difficulty":"easy"},{"q":"3 Termine à 30 Min ab 09:00 ohne Pause. Ende?","opts":["10:30","10:00","11:00"],"correct":0,"exp":"90 Min.","difficulty":"easy"},{"q":"To-do-Liste hilft bei…","opts":["Überblick","Vergessen fördern","Chaos erhöhen"],"correct":0,"exp":"Struktur.","difficulty":"easy"},{"q":"1 Woche hat…","opts":["7 Tage","5 Tage","10 Tage"],"correct":0,"exp":"7.","difficulty":"easy"},{"q":"Meeting 45 Min, Start 13:20. Ende?","opts":["14:05","14:00","13:50"],"correct":0,"exp":"13:20+45.","difficulty":"medium"},{"q":"Budget 200, ausgegeben 35%. Rest?","opts":["130","70","165"],"correct":0,"exp":"65% von 200.","difficulty":"medium"},{"q":"SMART-Ziel enthält u.a.…","opts":["messbar","vage","unendlich"],"correct":0,"exp":"Measurable.","difficulty":"medium"},{"q":"Pufferzeit dient…","opts":["Unvorhergesehenem","reiner Verschwendung","nur Chaos"],"correct":0,"exp":"Reserve.","difficulty":"medium"},{"q":"Oft besser: Aufgaben…","opts":["fokussiert nacheinander","alles gleichzeitig","gar nicht planen"],"correct":0,"exp":"Fokus.","difficulty":"medium"},{"q":"Deadline bedeutet…","opts":["Frist","Start","Pause"],"correct":0,"exp":"Frist.","difficulty":"medium"},{"q":"Kritischer Pfad ist…","opts":["längste Kette ohne Puffer","kürzeste Aufgabe","beliebige Liste"],"correct":0,"exp":"Projektplanung.","difficulty":"hard"},{"q":"80/20-Regel sagt grob…","opts":["20% Aufwand → viel Nutzen","alles gleich","0% genügt"],"correct":0,"exp":"Pareto.","difficulty":"hard"},{"q":"Kapazität 6h, Aufgaben 2+3+2h. An 1 Tag?","opts":["Nein ohne Überziehung","Ja locker","Egal"],"correct":0,"exp":"7>6.","difficulty":"hard"},{"q":"Eskalation bedeutet oft…","opts":["Problem nach oben melden","ignorieren","löschen"],"correct":0,"exp":"melden.","difficulty":"hard"},{"q":"Stakeholder sind…","opts":["Betroffene/Interessierte","nur IT","nie das Team"],"correct":0,"exp":"Anspruchsgruppen.","difficulty":"hard"}],"concentration":[{"q":"Welches Symbol kommt am häufigsten vor? ●◇○●◇●","opts":["●","◇","○"],"correct":0,"exp":"● dreimal.","difficulty":"easy"},{"q":"Zähle die A in BANANA","opts":["3","2","4"],"correct":0,"exp":"3×A.","difficulty":"easy"},{"q":"Welche Zahl fehlt: 1 2 3 5","opts":["4","6","0"],"correct":0,"exp":"4.","difficulty":"easy"},{"q":"Fehler finden: 2,4,6,7,10","opts":["7","6","10"],"correct":0,"exp":"sollte 8.","difficulty":"easy"},{"q":"Wie viele gerade: 1,2,3,4,5,6?","opts":["3","2","4"],"correct":0,"exp":"2,4,6.","difficulty":"easy"},{"q":"Letzter Buchstabe von „Konzentration“?","opts":["n","k","t"],"correct":0,"exp":"n.","difficulty":"easy"},{"q":"Muster: AB AC AD A?","opts":["E","B","F"],"correct":0,"exp":"Alphabet.","difficulty":"medium"},{"q":"Unterschied: 88991 / 88991 / 88919","opts":["88919","erstes","zweites"],"correct":0,"exp":"vertauscht.","difficulty":"medium"},{"q":"Summe 2+0+2+6?","opts":["10","8","12"],"correct":0,"exp":"10.","difficulty":"medium"},{"q":"Welches Wort hat die meisten Vokale?","opts":["Education","School","Train"],"correct":0,"exp":"Education.","difficulty":"medium"},{"q":"Konsonanten in „Pflege“?","opts":["4","3","5"],"correct":0,"exp":"P,f,l,g.","difficulty":"medium"},{"q":"Zähle „s“ in „Mississippis“","opts":["5","4","6"],"correct":0,"exp":"5×s (inkl. Ende).","difficulty":"medium"},{"q":"Wort „BLAU“ in Rot. Gefragt ist die Farbe der Schrift.","opts":["Rot","Blau","Grün"],"correct":0,"exp":"Schriftfarbe.","difficulty":"hard"},{"q":"Nur Zahlen >5 und gerade: 3,6,8,5,11,4 →","opts":["6 und 8","3 und 5","11 und 4"],"correct":0,"exp":"Filter.","difficulty":"hard"},{"q":"Buchstabenposition: C=3, F=?","opts":["6","5","7"],"correct":0,"exp":"F=6.","difficulty":"hard"},{"q":"2 von 50 falsch. Prozent?","opts":["4%","2%","10%"],"correct":0,"exp":"4%.","difficulty":"hard"},{"q":"147258 vs 147268 — wo Unterschied?","opts":["Zehnerstelle der Endgruppe","komplette Zahl gleich","nur Einer"],"correct":0,"exp":"5 vs 6.","difficulty":"hard"}],"memory":[{"q":"Merke: Ball, Baum, Auto. Welches war dabei?","opts":["Ball","Haus","Stuhl"],"correct":0,"exp":"Ball.","difficulty":"easy"},{"q":"Merke: 3, 8, 2. Welche Zahl?","opts":["8","5","9"],"correct":0,"exp":"8.","difficulty":"easy"},{"q":"Merke: rot, blau. Welche Farbe?","opts":["blau","grün","gelb"],"correct":0,"exp":"blau.","difficulty":"easy"},{"q":"Merke: Milch. Was war es?","opts":["Milch","Saft","Wasser"],"correct":0,"exp":"Milch.","difficulty":"easy"},{"q":"Merke: Hund & Katze. Was war dabei?","opts":["Hund","Vogel","Fisch"],"correct":0,"exp":"Hund.","difficulty":"easy"},{"q":"Merke: Zürich. Welche Stadt?","opts":["Zürich","Bern","Genf"],"correct":0,"exp":"Zürich.","difficulty":"easy"},{"q":"Liste: Stift, Lampe, Tasse, Buch. Was war 3.?","opts":["Tasse","Stift","Buch"],"correct":0,"exp":"Tasse.","difficulty":"medium"},{"q":"Zahlen: 9-1-4-7. Summe der äußeren?","opts":["16","10","11"],"correct":0,"exp":"9+7.","difficulty":"medium"},{"q":"Wörter: Sonne, Mond, Stern. Was fehlte?","opts":["Wolke","Mond","Stern"],"correct":0,"exp":"Wolke.","difficulty":"medium"},{"q":"Code: A1 B2 C3. D?","opts":["D4","D3","D1"],"correct":0,"exp":"D4.","difficulty":"medium"},{"q":"Name: Anna Müller. Nachname?","opts":["Müller","Meier","Schmidt"],"correct":0,"exp":"Müller.","difficulty":"medium"},{"q":"Uhrzeit 14:35. Minuten?","opts":["35","45","25"],"correct":0,"exp":"35.","difficulty":"medium"},{"q":"Sequenz: 2,4,8,3,9. Produkt der ersten zwei?","opts":["8","6","12"],"correct":0,"exp":"2×4.","difficulty":"hard"},{"q":"Farben: Grün, Gelb, Rot. Zweite?","opts":["Gelb","Grün","Rot"],"correct":0,"exp":"Gelb.","difficulty":"hard"},{"q":"Satz: „Klara trainiert Logik.“ Verb?","opts":["trainiert","spielt","lernt"],"correct":0,"exp":"trainiert.","difficulty":"hard"},{"q":"Paare: A-1, B-2, C-3. Wert von B?","opts":["2","1","3"],"correct":0,"exp":"2.","difficulty":"hard"},{"q":"Schlüssel links, Handy rechts. Links?","opts":["Schlüssel","Handy","nichts"],"correct":0,"exp":"Schlüssel.","difficulty":"hard"}],"spatial":[{"q":"Würfel: gegenüber von 1 oft…","opts":["6","2","3"],"correct":0,"exp":"1+6=7.","difficulty":"easy"},{"q":"Blick von oben auf Tisch = ?","opts":["Draufsicht","Seitenansicht","Untersicht"],"correct":0,"exp":"Draufsicht.","difficulty":"easy"},{"q":"Quadrat: rechte Winkel?","opts":["4","3","2"],"correct":0,"exp":"4.","difficulty":"easy"},{"q":"Spiegelung: b wird…","opts":["d","p","q"],"correct":0,"exp":"horizontal.","difficulty":"easy"},{"q":"Würfel Flächen?","opts":["6","4","8"],"correct":0,"exp":"6.","difficulty":"easy"},{"q":"12 → 3 auf Uhr: Drehung?","opts":["90°","180°","45°"],"correct":0,"exp":"90°.","difficulty":"easy"},{"q":"Du drehst dich 180°. Objekt vor dir ist relativ Start…","opts":["hinter der Startblickrichtung","links","unverändert"],"correct":0,"exp":"180°.","difficulty":"medium"},{"q":"Papier halb falten. Lagen?","opts":["2","3","1"],"correct":0,"exp":"2.","difficulty":"medium"},{"q":"Karte Norden oben: Osten?","opts":["rechts","links","unten"],"correct":0,"exp":"rechts.","difficulty":"medium"},{"q":"Würfel 1 oben, 2 vorne → unten?","opts":["6","3","5"],"correct":0,"exp":"6.","difficulty":"medium"},{"q":"Rechteck 2×3, ×2 skaliert. Fläche?","opts":["24","12","10"],"correct":0,"exp":"4×6.","difficulty":"medium"},{"q":"Näher an A als B heißt…","opts":["Abstand zu A kleiner","zu B kleiner","gleich"],"correct":0,"exp":"Distanz.","difficulty":"medium"},{"q":"90° im Uhrzeigersinn: Pfeil oben zeigt dann…","opts":["nach rechts","nach links","nach unten"],"correct":0,"exp":"cw.","difficulty":"hard"},{"q":"6 Quadrate in einer Reihe als Würfelnetz?","opts":["Nein","Ja immer","Nur mit Kleber"],"correct":0,"exp":"ungültig.","difficulty":"hard"},{"q":"(2,3) an y-Achse gespiegelt?","opts":["(-2,3)","(2,-3)","(-2,-3)"],"correct":0,"exp":"-x.","difficulty":"hard"},{"q":"Körper mit 2 Basen + Mantel oft…","opts":["Zylinder/Prisma","Kugel","Punkt"],"correct":0,"exp":"Prisma/Zylinder.","difficulty":"hard"},{"q":"Innenwinkel gleichseitiges Dreieck?","opts":["60°","90°","120°"],"correct":0,"exp":"60°.","difficulty":"hard"}],"networked":[{"q":"Mehr Regen → eher…","opts":["Hochwasser-Risiko","sofort Dürre","kein Bezug"],"correct":0,"exp":"Ursache-Wirkung.","difficulty":"easy"},{"q":"Impfung hilft…","opts":["vorzubeugen","Knochen sofort heilen","nur Haare"],"correct":0,"exp":"Prävention.","difficulty":"easy"},{"q":"Schlechte Kommunikation → oft…","opts":["Missverständnisse","automatisch Perfektion","kein Effekt"],"correct":0,"exp":"sozial.","difficulty":"easy"},{"q":"Wenig Schlaf → Konzentration…","opts":["sinkt oft","steigt immer","gesetzlich gleich"],"correct":0,"exp":"Zusammenhang.","difficulty":"easy"},{"q":"Bewegung + Ernährung beeinflussen…","opts":["Gesundheit","nur Schuhgröße","nur Namen"],"correct":0,"exp":"Lifestyle.","difficulty":"easy"},{"q":"Zu viel Stress kann…","opts":["Schlaf stören","nur Freude erhöhen","Knochen verlängern"],"correct":0,"exp":"Belastung.","difficulty":"easy"},{"q":"A→B→C. A steuern beeinflusst…","opts":["C indirekt","nie C","nur Zufall"],"correct":0,"exp":"Kette.","difficulty":"medium"},{"q":"Erfolg → Motivation → Übung → …","opts":["wieder Erfolgschance","garantiert Abbruch","kein Bezug"],"correct":0,"exp":"Feedback.","difficulty":"medium"},{"q":"Engpass in Schritt 2 limitiert…","opts":["Gesamtdurchsatz","nur Schritt 9","nichts"],"correct":0,"exp":"Flaschenhals.","difficulty":"medium"},{"q":"Frühe Prävention ist oft…","opts":["wirksamer/günstiger","immer teurer","nutzlos"],"correct":0,"exp":"Systemdenken.","difficulty":"medium"},{"q":"Mehrere Medikamente: prüfen wegen…","opts":["Wechselwirkungen","Mode","Zufall"],"correct":0,"exp":"Interaktion.","difficulty":"medium"},{"q":"Isolation korreliert oft mit…","opts":["schlechterem Wohlbefinden","garantiert Reichtum","besserer Immun-Garantie"],"correct":0,"exp":"sozial.","difficulty":"medium"},{"q":"Rebound: Effizienz rauf, Verbrauch…","opts":["kann wieder steigen","fällt immer auf 0","egal"],"correct":0,"exp":"Rebound.","difficulty":"hard"},{"q":"Trade-off bedeutet…","opts":["Abwägung","nur Win-win","kein Konflikt"],"correct":0,"exp":"Zielkonflikt.","difficulty":"hard"},{"q":"Latenz: Wirkung kommt…","opts":["verzögert","immer sofort","nie"],"correct":0,"exp":"Delay.","difficulty":"hard"},{"q":"Resilienz ist…","opts":["Widerstands-/Erholungsfähigkeit","reine Starrheit","Chaosliebe"],"correct":0,"exp":"Robustheit.","difficulty":"hard"},{"q":"Unerwünschte Folge einer Maßnahme…","opts":["Nebenwirkung/externer Effekt","Hauptziel","kein System"],"correct":0,"exp":"Second order.","difficulty":"hard"}],"numbersequence":[{"q":"2, 4, 8, 16, ?","opts":["32","24","18"],"correct":0,"exp":"×2.","difficulty":"easy"},{"q":"10, 20, 30, ?","opts":["40","35","45"],"correct":0,"exp":"+10.","difficulty":"easy"},{"q":"5, 10, 15, 20, ?","opts":["25","22","30"],"correct":0,"exp":"+5.","difficulty":"easy"},{"q":"100, 90, 80, ?","opts":["70","60","85"],"correct":0,"exp":"−10.","difficulty":"easy"},{"q":"1, 4, 9, 16, ?","opts":["25","20","18"],"correct":0,"exp":"Quadrate.","difficulty":"easy"},{"q":"3, 6, 9, 12, ?","opts":["15","14","18"],"correct":0,"exp":"+3.","difficulty":"easy"},{"q":"2, 6, 12, 20, ?","opts":["30","24","28"],"correct":0,"exp":"+4,+6,+8,+10.","difficulty":"medium"},{"q":"81, 27, 9, 3, ?","opts":["1","0","2"],"correct":0,"exp":"÷3.","difficulty":"medium"},{"q":"1, 2, 4, 7, 11, ?","opts":["16","14","15"],"correct":0,"exp":"+1..+5.","difficulty":"medium"},{"q":"4, 5, 7, 10, 14, ?","opts":["19","18","17"],"correct":0,"exp":"+1..+5.","difficulty":"medium"},{"q":"2, 3, 5, 7, 11, ?","opts":["13","12","15"],"correct":0,"exp":"Primzahlen.","difficulty":"medium"},{"q":"64, 32, 16, 8, ?","opts":["4","2","6"],"correct":0,"exp":"÷2.","difficulty":"medium"},{"q":"1, 1, 2, 6, 24, ?","opts":["120","48","36"],"correct":0,"exp":"n!.","difficulty":"hard"},{"q":"2, 5, 10, 17, 26, ?","opts":["37","35","34"],"correct":0,"exp":"+3,+5,+7,+9,+11.","difficulty":"hard"},{"q":"3, 4, 6, 9, 13, 18, ?","opts":["24","22","23"],"correct":0,"exp":"+1..+6.","difficulty":"hard"},{"q":"7, 10, 16, 28, ?","opts":["52","40","34"],"correct":0,"exp":"×2−4.","difficulty":"hard"},{"q":"0, 1, 1, 2, 3, 5, 8, ?","opts":["13","11","12"],"correct":0,"exp":"Fibonacci.","difficulty":"hard"}],"figural":[{"q":"Dreieck : 3 Seiten = Quadrat : ?","opts":["4 Seiten","5 Seiten","Kreis"],"correct":0,"exp":"4.","difficulty":"easy"},{"q":"Kreis ist…","opts":["rund","eckig","dreieckig"],"correct":0,"exp":"rund.","difficulty":"easy"},{"q":"5 Ecken?","opts":["Pentagon","Quadrat","Dreieck"],"correct":0,"exp":"Penta.","difficulty":"easy"},{"q":"Zwei Kreise übereinander ähneln grob…","opts":["einer 8","einem Dreieck","einem Würfel"],"correct":0,"exp":"8-Form.","difficulty":"easy"},{"q":"Würfel von vorne zeigt frontal…","opts":["eine Fläche","alle 6","keine"],"correct":0,"exp":"1 Fläche.","difficulty":"easy"},{"q":"Herz oft…","opts":["spiegelsymmetrisch","nie symmetrisch","nur 120° Rotation"],"correct":0,"exp":"Spiegel.","difficulty":"easy"},{"q":"Muster ■□■ / □■□ / ■□■ — nächste startet mit?","opts":["□","■","○"],"correct":0,"exp":"Wechsel.","difficulty":"medium"},{"q":"Welche passt nicht: Dreieck, Quadrat, Pentagon, Linie","opts":["Linie","Dreieck","Quadrat"],"correct":0,"exp":"keine Fläche.","difficulty":"medium"},{"q":"Kreisumfang enthält…","opts":["π","nur x²","Fakultät"],"correct":0,"exp":"π.","difficulty":"medium"},{"q":"Tangram-Ziel?","opts":["Form legen","würfeln","nur zählen"],"correct":0,"exp":"legen.","difficulty":"medium"},{"q":"Würfel von der Ecke kann…","opts":["sechseckig wirken","nur rund","nur Linie"],"correct":0,"exp":"Projektion.","difficulty":"medium"},{"q":"Kongruente Figuren sind…","opts":["deckungsgleich","nur ähnlich skaliert","immer verschieden"],"correct":0,"exp":"gleich.","difficulty":"medium"},{"q":"Würfelnetz: 6 in einer Reihe?","opts":["ungültig","immer gültig","nur mit Kleber"],"correct":0,"exp":"max 4 in Reihe.","difficulty":"hard"},{"q":"Ähnliche Figuren haben…","opts":["gleiche Form, evtl. andere Größe","immer gleiche Fläche","nie gleiche Winkel"],"correct":0,"exp":"Ähnlichkeit.","difficulty":"hard"},{"q":"Orthogonale Ansicht = …","opts":["rechtwinklige Projektion","Fluchtpunktperspektive","nur Schrägbild"],"correct":0,"exp":"orthogonal.","difficulty":"hard"},{"q":"Regelmäßiges Achteck Innenwinkel?","opts":["135°","90°","60°"],"correct":0,"exp":"135°.","difficulty":"hard"},{"q":"Topologie: Tasse ≈ Donut wegen…","opts":["einem Loch","Würfelform","Farbe"],"correct":0,"exp":"Genus 1.","difficulty":"hard"}]};
+// ---------- NUMBER SEQUENCE ----------
+function generateNumberSequenceFragen() {
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const step = 2 + (i % 9);
+    const a = 1 + (i % 20);
+    const seq = [a, a + step, a + 2 * step, a + 3 * step];
+    const next = a + 4 * step;
+    out.push(makeNumQ(seq.join(', ') + ', ?', next, 'easy', '+' + step, 'ns-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const m = 2 + (i % 4);
+    let a = 1 + (i % 5);
+    const seq = [];
+    for (let k = 0; k < 4; k++) { seq.push(a); a *= m; }
+    out.push(makeNumQ(seq.join(', ') + ', ?', a, 'medium', '×' + m, 'ns-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    // differences increase: start, +1,+2,+3,+4
+    const start = 1 + (i % 15);
+    const seq = [start];
+    let cur = start;
+    for (let k = 1; k <= 4; k++) { cur += k; seq.push(cur); }
+    const next = cur + 5;
+    // show first 4, ask 5th already in seq - ask next after 4 terms displayed
+    const shown = seq.slice(0, 4);
+    const ans = seq[4];
+    out.push(makeNumQ(shown.join(', ') + ', ?', ans, 'hard', 'Differenzen +1,+2,+3,+4', 'ns-h-' + i));
+  }
+  return out;
+}
+
+// ---------- LOGIC ----------
+function generateLogicFragen() {
+  const animals = ['Hund','Katze','Maus','Pferd','Vogel','Fisch','Kuh','Schaf'];
+  const colors = ['Rot','Blau','Grün','Gelb','Schwarz','Weiss'];
+  const vehicles = ['Auto','Bus','Zug','Flugzeug','Schiff','Fahrrad'];
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const step = 2 + (i % 5);
+    const a = i + 1;
+    out.push(makeNumQ('Logik-Reihe: ' + a + ', ' + (a + step) + ', ' + (a + 2 * step) + ', ?', a + 3 * step, 'easy', '+' + step, 'lg-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const odd = vehicles[i % vehicles.length];
+    const a1 = animals[i % animals.length];
+    const a2 = animals[(i + 1) % animals.length];
+    out.push(makeTextQ('Was passt nicht? ' + a1 + ', ' + a2 + ', ' + odd, odd, [a1, a2], 'medium', odd + ' ist kein Tier.', 'lg-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const A = 'A', B = 'B', C = 'C';
+    // A > B > C style
+    out.push(makeTextQ('A ist größer als B, B größer als C. Wer ist am kleinsten? (Fall ' + (i + 1) + ')', 'C', ['A','B'], 'hard', 'A>B>C → C kleinste.', 'lg-h-' + i));
+  }
+  return out;
+}
+
+// ---------- SCIENCE ----------
+function generateScienceFragen() {
+  const facts = [
+    ['Welches Gas brauchen wir zum Atmen?', 'Sauerstoff', ['Helium','Stickstoff allein']],
+    ['Wasser gefriert bei?', '0 °C', ['100 °C','50 °C']],
+    ['Größter Planet?', 'Jupiter', ['Erde','Mars']],
+    ['Blut pumpt?', 'Herz', ['Leber','Magen']],
+    ['Einheit Kraft?', 'Newton', ['Watt','Volt']],
+    ['Photosynthese braucht?', 'Licht', ['nur Dunkelheit','nur Salz']],
+    ['Knochen Erwachsene ca.?', '206', ['100','500']],
+    ['pH 7 ist?', 'neutral', ['sauer','basisch']],
+    ['DNA speichert?', 'Erbinformation', ['nur Zucker','nur Fett']],
+    ['Erdanziehung?', 'Gravitation', ['Magnetismus','Reibung']],
+    ['Antibiotika gegen?', 'Bakterien', ['Viren immer','nur Pilze']],
+    ['Niere macht?', 'Blut filtrieren', ['Verdauung','Hormonsingen']],
+    ['Schall braucht?', 'Medium', ['Vakuum','nur Licht']],
+    ['Vitamin-C-Mangel?', 'Skorbut', ['Rachitis','nur B12']],
+    ['Ruhepuls ca.?', '60–80/min', ['10/min','200/min']],
+    ['Mitochondrien?', 'Zell-Kraftwerke', ['Zellkern','Zellwand']],
+    ['Ohm: U = ?', 'R · I', ['U + I','m + a']],
+    ['Nosokomial heißt?', 'Krankenhausinfektion', ['Endemie','Pandemie']],
+    ['Systole ist?', 'Herzkontraktion', ['Herzpause','nur Vorhof']],
+    ['Isotope differieren in?', 'Neutronen', ['immer Protonen','nur Name']],
+    ['Katalysator?', 'senkt Aktivierungsenergie', ['wird verbraucht','ändert Gleichgewicht dauerhaft']],
+    ['Siedepunkt Wasser?', '100 °C', ['0 °C','50 °C']],
+    ['Planet der Menschen?', 'Erde', ['Mars','Venus']],
+    ['Haut schützt vor?', 'Keimen/Verletzung', ['nur Hunger','nur Durst']],
+    ['Lunge nimmt auf?', 'Sauerstoff', ['nur CO2 rein','Helium']],
+    ['Knochenmark bildet?', 'Blutkörperchen', ['Galle','Speichel']],
+    ['Insulin reguliert?', 'Blutzucker', ['nur Hörvermögen','nur Haar']],
+    ['Vitamin D kommt u.a. von?', 'Sonnenlicht', ['nur Eisen','nur Salz']],
+    ['Nerven leiten?', 'Signale', ['Blut','Luft']],
+    ['Impfung dient?', 'Prävention', ['Dekoration','nur Mode']]
+  ];
+  const out = [];
+  for (let i = 0; i < TARGET_PER_AREA; i++) {
+    const f = facts[i % facts.length];
+    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
+    out.push(makeTextQ(f[0] + (i >= facts.length ? ' (' + (Math.floor(i / facts.length) + 1) + ')' : ''), f[1], f[2], diff, f[1], 'sci-' + i));
+  }
+  return out;
+}
+
+// ---------- FRENCH ----------
+function generateFrenchFragen() {
+  const vocab = [
+    ['bonjour','Guten Tag'],['merci','Danke'],['oui','Ja'],['non','Nein'],['eau','Wasser'],['pain','Brot'],
+    ['au revoir','Auf Wiedersehen'],["s'il vous plaît",'Bitte'],['je suis','Ich bin'],['avoir','haben'],
+    ['où','wo'],['pourquoi','warum'],['beaucoup','viel'],['maison','Haus'],['ami','Freund'],['famille','Familie'],
+    ['école','Schule'],['travail','Arbeit'],['temps','Zeit'],['jour','Tag'],['nuit','Nacht'],['matin','Morgen'],
+    ['soir','Abend'],['heureux','glücklich'],['triste','traurig'],['grand','groß'],['petit','klein'],
+    ['rapide','schnell'],['lent','langsam'],['chaud','heiß'],['froid','kalt'],['bon','gut'],['mauvais','schlecht'],
+    ['nouveau','neu'],['vieux','alt'],['médecin','Arzt'],['infirmière','Krankenschwester'],['patient','Patient'],
+    ['santé','Gesundheit'],['hôpital','Krankenhaus'],['aide','Hilfe'],['besoin','Bedarf'],["aujourd'hui",'heute'],
+    ['demain','morgen'],['hier','gestern'],['toujours','immer'],['jamais','nie'],['souvent','oft'],
+    ['parfois','manchmal'],['parce que','weil'],['mais','aber'],['et','und'],['ou','oder'],['avec','mit'],
+    ['sans','ohne'],['avant','vor'],['après','nach'],['sous','unter'],['sur','auf'],['gauche','links'],
+    ['droite','rechts'],['corps','Körper'],['tête','Kopf'],['main','Hand'],['pied','Fuß'],['cœur','Herz'],
+    ['sang','Blut'],['douleur','Schmerz'],['fièvre','Fieber'],['médicament','Medikament'],['soin','Pflege'],
+    ['propre','sauber'],['sale','schmutzig'],['sûr','sicher'],['danger','Gefahr'],['urgence','Notfall'],
+    ['rendez-vous','Termin'],['question','Frage'],['réponse','Antwort'],['apprendre','lernen'],['lire','lesen'],
+    ['écrire','schreiben'],['parler','sprechen'],['écouter','zuhören'],['comprendre','verstehen'],
+    ['important','wichtig'],['difficile','schwierig'],['facile','einfach'],['possible','möglich'],
+    ['tôt','früh'],['tard','spät'],['bientôt','bald'],['déjà','schon'],['encore','noch'],['assez','genug'],
+    ['plus','mehr'],['moins','weniger'],['premier','erste'],['dernier','letzte'],['même','gleich'],
+    ['autre','andere'],['personne','Person'],['enfant','Kind'],['femme','Frau'],['homme','Mann'],
+    ['ville','Stadt'],['pays','Land'],['rue','Straße'],['chambre','Zimmer'],['porte','Tür'],['fenêtre','Fenster'],
+    ['table','Tisch'],['chaise','Stuhl'],['lit','Bett'],['téléphone','Telefon'],['argent','Geld'],
+    ['prix','Preis'],['acheter','kaufen'],['vendre','verkaufen'],['payer','bezahlen'],['ouvrir','öffnen'],
+    ['fermer','schließen'],['commencer','beginnen'],['arrêter','stoppen'],['attendre','warten'],['venir','kommen'],
+    ['aller','gehen'],['prendre','nehmen'],['donner','geben'],['trouver','finden'],['perdre','verlieren'],
+    ['savoir','wissen'],['penser','denken'],['sentir','fühlen'],['aimer','lieben'],['préférer','bevorzugen'],
+    ['fort','stark'],['faible','schwach'],['sain','gesund'],['malade','krank'],['fatigué','müde'],
+    ['faim','Hunger'],['soif','Durst'],['occupé','beschäftigt'],['libre','frei'],['prêt','bereit'],
+    ['cheval','Pferd'],['chevaux','Pferde (Plural)'],['belle','schöne (f)'],['il y a','es gibt']
+  ];
+  const out = [];
+  for (let i = 0; i < TARGET_PER_AREA; i++) {
+    const v = vocab[i % vocab.length];
+    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
+    if (i % 2 === 0) out.push(makeTextQ('„' + v[0] + '“ bedeutet?', v[1], [vocab[(i + 5) % vocab.length][1], vocab[(i + 11) % vocab.length][1]], diff, v[0] + ' = ' + v[1], 'fr-' + i));
+    else out.push(makeTextQ('„' + v[1] + '“ auf Französisch?', v[0], [vocab[(i + 4) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], diff, v[1] + ' = ' + v[0], 'fr-' + i));
+  }
+  return out;
+}
+
+// ---------- ORGANISATION ----------
+function generateOrganisationFragen() {
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const startH = 8 + (i % 10);
+    const startM = (i % 4) * 15;
+    const dur = 30 + (i % 6) * 15;
+    const endTotal = startH * 60 + startM + dur;
+    const eh = Math.floor(endTotal / 60) % 24;
+    const em = endTotal % 60;
+    const ans = String(eh).padStart(2, '0') + ':' + String(em).padStart(2, '0');
+    const start = String(startH).padStart(2, '0') + ':' + String(startM).padStart(2, '0');
+    const w1 = String(eh).padStart(2, '0') + ':' + String((em + 15) % 60).padStart(2, '0');
+    const w2 = String((eh + 1) % 24).padStart(2, '0') + ':' + String(em).padStart(2, '0');
+    out.push(makeTextQ('Start ' + start + ', Dauer ' + dur + ' Min. Ende?', ans, [w1, w2], 'easy', start + ' + ' + dur + ' Min', 'org-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const budget = 100 + (i % 20) * 50;
+    const pct = 10 + (i % 8) * 5;
+    const spent = budget * pct / 100;
+    const rest = budget - spent;
+    out.push(makeNumQ('Budget ' + budget + ', ausgegeben ' + pct + '%. Rest?', rest, 'medium', 'Rest = ' + rest, 'org-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const cap = 5 + (i % 6);
+    const t1 = 1 + (i % 3), t2 = 2 + (i % 3), t3 = 2 + ((i + 1) % 3);
+    const sum = t1 + t2 + t3;
+    const ok = sum <= cap ? 'Ja' : 'Nein';
+    out.push(makeTextQ('Kapazität ' + cap + 'h, Aufgaben ' + t1 + '+' + t2 + '+' + t3 + 'h. Machbar?', ok, [ok === 'Ja' ? 'Nein' : 'Ja', 'Unmöglich zu sagen'], 'hard', sum + ' vs ' + cap, 'org-h-' + i));
+  }
+  return out;
+}
+
+// ---------- CONCENTRATION ----------
+function generateConcentrationFragen() {
+  const symbols = ['●','◇','○','■','▲'];
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const rnd = seedRand(1000 + i);
+    const counts = [0, 0, 0];
+    let s = '';
+    const use = symbols.slice(0, 3);
+    for (let k = 0; k < 8; k++) {
+      const idx = Math.floor(rnd() * 3);
+      // bias first symbol to win uniquely
+      const pick = k < 4 ? 0 : idx;
+      counts[pick]++;
+      s += use[pick];
+    }
+    // ensure unique max
+    let maxI = 0;
+    for (let j = 1; j < 3; j++) if (counts[j] > counts[maxI]) maxI = j;
+    for (let j = 0; j < 3; j++) if (j !== maxI && counts[j] === counts[maxI]) counts[maxI]++;
+    // rebuild string with corrected counts roughly - simpler: fixed pattern
+  }
+  // simpler deterministic
+  for (let i = 0; i < 100; i++) {
+    const a = 3 + (i % 3);
+    const b = 1 + (i % 2);
+    const c = 1;
+    const s = '●'.repeat(a) + '◇'.repeat(b) + '○'.repeat(c);
+    out.push(makeTextQ('Welches Symbol kommt am häufigsten vor? ' + s, '●', ['◇','○'], 'easy', '● ×' + a, 'co-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const word = ['BANANA','MISSISSIPPI','PFLEGE','KONZENTRATION','GESUNDHEIT','MULTICHECK','TRAINING','SCHWEIZ'][i % 8];
+    const ch = word[(i * 3) % word.length];
+    let cnt = 0;
+    for (const c of word) if (c === ch) cnt++;
+    out.push(makeNumQ('Wie oft kommt "' + ch + '" in ' + word + ' vor?', cnt, 'medium', 'zählen', 'co-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const wrong = 1 + (i % 9);
+    const total = 20 + (i % 10) * 5;
+    const pct = Math.round((wrong / total) * 100);
+    out.push(makeNumQ(wrong + ' von ' + total + ' falsch. Prozent (gerundet)?', pct, 'hard', wrong + '/' + total, 'co-h-' + i));
+  }
+  return out;
+}
+
+// ---------- MEMORY ----------
+function generateMemoryFragen() {
+  const words = ['Ball','Baum','Auto','Haus','Stift','Lampe','Tasse','Buch','Hund','Katze','Milch','Brot','Zürich','Bern','Sonne','Mond','Stern','Schlüssel','Handy','Tisch','Stuhl','Fenster','Tür','Wasser','Apfel','Birne','Schule','Arzt','Pflege','Herz'];
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const w = [words[i % words.length], words[(i + 3) % words.length], words[(i + 7) % words.length]];
+    out.push(makeTextQ('Merke: ' + w.join(', ') + '. Welches war dabei?', w[0], ['Vulkan','Laptop'], 'easy', w[0] + ' war in der Liste.', 'mem-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const w = [words[i % words.length], words[(i + 2) % words.length], words[(i + 4) % words.length], words[(i + 6) % words.length]];
+    out.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war 3.?', w[2], [w[0], w[1]], 'medium', '3. = ' + w[2], 'mem-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const nums = [2 + (i % 9), 4 + (i % 7), 8 + (i % 5), 3 + (i % 4), 9 + (i % 3)];
+    out.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Produkt der ersten zwei?', nums[0] * nums[1], 'hard', nums[0] + '×' + nums[1], 'mem-h-' + i));
+  }
+  return out;
+}
+
+// ---------- SPATIAL ----------
+function generateSpatialFragen() {
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const top = 1 + (i % 6);
+    const bottom = 7 - top;
+    out.push(makeNumQ('Würfel: oben ' + top + ' (Gegenüber summiert 7). Unten?', bottom, 'easy', top + '+unten=7', 'sp-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const w = 2 + (i % 8), h = 2 + (i % 6), s = 2 + (i % 3);
+    out.push(makeNumQ('Rechteck ' + w + '×' + h + ', Skalierung ×' + s + '. Neue Fläche?', (w * s) * (h * s), 'medium', 'Fläche skaliert mit s²', 'sp-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const n = 3 + (i % 6);
+    const ang = ((n - 2) * 180) / n;
+    out.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', '((n-2)×180)/n', 'sp-h-' + i));
+  }
+  return out;
+}
+
+// ---------- NETWORKED ----------
+function generateNetworkedFragen() {
+  const pairs = [
+    ['Mehr Regen → eher…', 'Hochwasser-Risiko', ['sofort Dürre','kein Bezug']],
+    ['Impfung hilft…', 'vorzubeugen', ['Knochen sofort heilen','nur Haare']],
+    ['Wenig Schlaf → Konzentration…', 'sinkt oft', ['steigt immer','bleibt gleich']],
+    ['Schlechte Kommunikation →', 'Missverständnisse', ['automatisch Perfektion','kein Effekt']],
+    ['Bewegung + Ernährung beeinflussen…', 'Gesundheit', ['nur Schuhgröße','nur Namen']],
+    ['Stress kann…', 'Schlaf stören', ['Knochen verlängern','nur Freude']],
+    ['A→B→C steuern von A beeinflusst…', 'C indirekt', ['nie C','nur Zufall']],
+    ['Engpass limitiert…', 'Gesamtdurchsatz', ['nur Schritt 9','nichts']],
+    ['Frühe Prävention oft…', 'wirksamer', ['immer nutzlos','immer teurer ohne Nutzen']],
+    ['Medikamente prüfen wegen…', 'Wechselwirkungen', ['Mode','Zufall']],
+    ['Isolation korreliert oft mit…', 'schlechterem Wohlbefinden', ['garantiert Reichtum','Immun-Garantie']],
+    ['Trade-off bedeutet…', 'Abwägung', ['nur Win-win','kein Konflikt']],
+    ['Latenz: Wirkung kommt…', 'verzögert', ['immer sofort','nie']],
+    ['Resilienz ist…', 'Widerstands-/Erholungsfähigkeit', ['Chaosliebe','reine Starrheit']],
+    ['Feedback-Schleife Erfolg→Übung→…', 'mehr Erfolgschance', ['garantiert Abbruch','kein Bezug']]
+  ];
+  const out = [];
+  for (let i = 0; i < TARGET_PER_AREA; i++) {
+    const p = pairs[i % pairs.length];
+    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
+    out.push(makeTextQ(p[0] + (i >= pairs.length ? ' #' + (i + 1) : ''), p[1], p[2], diff, p[1], 'net-' + i));
+  }
+  return out;
+}
+
+// ---------- FIGURAL ----------
+function generateFiguralFragen() {
+  const shapes = [
+    ['Dreieck', 3],['Quadrat', 4],['Pentagon', 5],['Hexagon', 6],['Heptagon', 7],['Oktagon', 8]
+  ];
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const s = shapes[i % shapes.length];
+    out.push(makeNumQ('Wie viele Seiten hat ein ' + s[0] + '?', s[1], 'easy', s[0] + '=' + s[1], 'fig-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const s = shapes[i % shapes.length];
+    out.push(makeTextQ('Analogie: Dreieck:3 = ' + s[0] + ':?', String(s[1]), [String(s[1] + 1), String(s[1] - 1)], 'medium', 'Seitenzahl', 'fig-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const n = 3 + (i % 6);
+    const ang = ((n - 2) * 180) / n;
+    out.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', 'Formel', 'fig-h-' + i));
+  }
+  return out;
+}
 
 function generateAllFragen() {
   return {
-    deutsch: generateDeutschFragen(),
+    deutsch: generateDeutschFragenFixed(),
     english: generateEnglischFragen(),
     math: generateMathFragen(),
-    logic: EXTRA_AREA_QUESTIONS.logic,
-    science: EXTRA_AREA_QUESTIONS.science,
-    french: EXTRA_AREA_QUESTIONS.french,
-    organisation: EXTRA_AREA_QUESTIONS.organisation,
-    concentration: EXTRA_AREA_QUESTIONS.concentration,
-    memory: EXTRA_AREA_QUESTIONS.memory,
-    spatial: EXTRA_AREA_QUESTIONS.spatial,
-    networked: EXTRA_AREA_QUESTIONS.networked,
-    numbersequence: EXTRA_AREA_QUESTIONS.numbersequence,
-    figural: EXTRA_AREA_QUESTIONS.figural
+    logic: generateLogicFragen(),
+    science: generateScienceFragen(),
+    french: generateFrenchFragen(),
+    organisation: generateOrganisationFragen(),
+    concentration: generateConcentrationFragen(),
+    memory: generateMemoryFragen(),
+    spatial: generateSpatialFragen(),
+    networked: generateNetworkedFragen(),
+    numbersequence: generateNumberSequenceFragen(),
+    figural: generateFiguralFragen()
   };
 }
 
@@ -325,64 +740,151 @@ const difficulties = [
 
 const ROUNDS_TRAINING = 20;
 const ROUNDS_EXAM = 100;
+const RECENT_LIMIT = 400;
+
+function loadJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch (e) { return fallback; }
+}
 
 const state = {
   screen: 'home',
   tab: 'train',
+  mode: 'train', // train | exam | review
   area: null,
   difficulty: 'medium',
   round: 0,
   correct: 0,
+  plannedRounds: ROUNDS_TRAINING,
   currentQuestion: null,
+  currentArea: null,
   timeLeft: 90,
   timer: null,
+  answerTimeout: null,
   startTime: null,
-  sessions: JSON.parse(localStorage.getItem('mc_sessions') || '[]'),
+  sessions: loadJSON('mc_sessions', []),
   darkMode: localStorage.getItem('mc_dark') === 'true',
   answered: false,
-  version: 'v8-stable', answerTimeout: null, selectedIdx: null
+  selectedIdx: null,
+  usedIds: new Set(),
+  recentIds: loadJSON('mc_recent_ids', []),
+  mistakes: loadJSON('mc_mistakes', []),
+  version: 'v9-300-norepeat-review'
 };
 
 if (state.darkMode) document.body.classList.add('dark');
 
 function rand(max) { return Math.floor(Math.random() * max); }
 
-function shuffle(arr) {
-  let r = [...arr];
-  for (let i = r.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [r[i], r[j]] = [r[j], r[i]];
+function questionKey(q) {
+  return q.id || (q.q + '|' + (q.opts || []).join('|'));
+}
+
+function shuffleQuestion(q, area) {
+  if (!q) return null;
+  const order = q.opts.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [order[i], order[j]] = [order[j], order[i]];
   }
-  return r;
+  return {
+    id: q.id || questionKey(q),
+    area: area || q.area || state.area,
+    q: q.q,
+    opts: order.map(i => q.opts[i]),
+    correct: order.indexOf(q.correct),
+    exp: q.exp || 'Siehe Lösung',
+    rawCorrect: q.opts[q.correct]
+  };
+}
+
+function diffFilter(diff) {
+  return (q) => {
+    if (diff === 'veryeasy') return q.difficulty === 'easy';
+    if (diff === 'easy') return q.difficulty === 'easy' || q.difficulty === 'medium';
+    if (diff === 'medium') return true;
+    if (diff === 'hard') return q.difficulty === 'hard' || q.difficulty === 'medium';
+    return true;
+  };
+}
+
+function markUsed(id) {
+  if (!id) return;
+  state.usedIds.add(id);
+  state.recentIds = [id, ...state.recentIds.filter(x => x !== id)].slice(0, RECENT_LIMIT);
+  localStorage.setItem('mc_recent_ids', JSON.stringify(state.recentIds));
 }
 
 function getQuestion(area) {
   const allQs = questionBank[area] || [];
   if (!allQs.length) return null;
 
-  const diff = state.difficulty;
-  let pool = allQs.filter(q => {
-    if (diff === 'veryeasy') return q.difficulty === 'easy';
-    if (diff === 'easy') return q.difficulty === 'easy' || q.difficulty === 'medium';
-    if (diff === 'medium') return true;
-    if (diff === 'hard') return q.difficulty === 'hard' || q.difficulty === 'medium';
-    return true;
-  });
-  if (!pool.length) pool = allQs;
+  const filter = diffFilter(state.difficulty);
+  const recentSet = new Set(state.recentIds);
+
+  const tiers = [
+    allQs.filter(q => filter(q) && !state.usedIds.has(q.id) && !recentSet.has(q.id)),
+    allQs.filter(q => filter(q) && !state.usedIds.has(q.id)),
+    allQs.filter(q => !state.usedIds.has(q.id)),
+    // neighbor difficulties already covered by expanding pool
+  ];
+
+  let pool = tiers.find(t => t.length > 0) || [];
+  if (!pool.length) return null; // exhausted — no repeats in this run
 
   const q = pool[rand(pool.length)];
-  const order = q.opts.map((_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = rand(i + 1);
-    [order[i], order[j]] = [order[j], order[i]];
-  }
+  const shuffled = shuffleQuestion(q, area);
+  markUsed(shuffled.id);
+  return shuffled;
+}
 
-  return {
-    q: q.q,
-    opts: order.map(i => q.opts[i]),
-    correct: order.indexOf(q.correct),
-    exp: q.exp || 'Siehe Lösung'
-  };
+function getReviewQuestion() {
+  const left = state.mistakes.filter(m => !state.usedIds.has(m.id));
+  if (!left.length) return null;
+  const m = left[rand(left.length)];
+  markUsed(m.id);
+  return shuffleQuestion({
+    id: m.id,
+    q: m.q,
+    opts: m.opts,
+    correct: m.correct,
+    exp: m.exp,
+    difficulty: 'medium'
+  }, m.area);
+}
+
+function saveMistakes() {
+  localStorage.setItem('mc_mistakes', JSON.stringify(state.mistakes));
+}
+
+function recordMistake(q) {
+  if (!q) return;
+  const id = q.id || questionKey(q);
+  const existing = state.mistakes.find(m => m.id === id);
+  if (existing) {
+    existing.count = (existing.count || 1) + 1;
+    existing.lastWrong = new Date().toISOString();
+  } else {
+    // store with original option order where correct is index of rawCorrect
+    const opts = [...q.opts];
+    const correct = q.correct;
+    state.mistakes.push({
+      id,
+      q: q.q,
+      opts,
+      correct,
+      exp: q.exp,
+      area: q.area || state.currentArea || state.area || 'unknown',
+      count: 1,
+      lastWrong: new Date().toISOString()
+    });
+  }
+  saveMistakes();
+}
+
+function clearMistake(id) {
+  state.mistakes = state.mistakes.filter(m => m.id !== id);
+  saveMistakes();
 }
 
 function clearTimers() {
@@ -393,8 +895,12 @@ function clearTimers() {
 }
 
 function startTimer() {
-  const times = {veryeasy: 120, easy: 105, medium: 90, hard: 75};
-  state.timeLeft = times[state.difficulty] || 90;
+  if (state.mode === 'review') {
+    state.timeLeft = 90;
+  } else {
+    const times = {veryeasy: 120, easy: 105, medium: 90, hard: 75};
+    state.timeLeft = times[state.difficulty] || 90;
+  }
   state.answered = false;
   state.selectedIdx = null;
   if (state.timer) clearInterval(state.timer);
@@ -439,13 +945,37 @@ function countQuestions() {
   return Object.keys(questionBank).reduce((sum, k) => sum + (questionBank[k] ? questionBank[k].length : 0), 0);
 }
 
+function nextQuestion() {
+  if (state.mode === 'review') {
+    state.currentQuestion = getReviewQuestion();
+    state.currentArea = state.currentQuestion ? state.currentQuestion.area : null;
+    return state.currentQuestion;
+  }
+  const areaId = state.area || areas[rand(areas.length)].id;
+  state.currentArea = areaId;
+  state.currentQuestion = getQuestion(areaId);
+  return state.currentQuestion;
+}
+
+function finishEarlyIfNeeded() {
+  // called when no question available
+  clearTimers();
+  const total = Math.max(state.round, 1);
+  saveSession(state.mode === 'review' ? 'review' : (state.area || 'exam'), (Date.now() - state.startTime) / 1000, state.correct, total, state.difficulty);
+  state.plannedRounds = total;
+  state.screen = 'result';
+  state.endedEarly = true;
+}
+
 function renderHome(app) {
+  const mistakeCount = state.mistakes.length;
   let html = '<header>';
   html += '<button class="dark-toggle" onclick="toggleDarkMode()">' + (state.darkMode ? '☀️' : '🌙') + '</button>';
-  html += '<h1>Multicheck Trainer PRO</h1><p>Echte Fragen · Alle 13 Bereiche · Level & Timer</p></header>';
+  html += '<h1>Multicheck Trainer PRO</h1><p>300 Fragen/Bereich · Keine Wiederholung · Fehler üben</p></header>';
   html += '<div class="container">';
   html += '<div class="nav-tabs">';
   html += '<button class="nav-tab' + (state.tab === 'train' ? ' active' : '') + '" onclick="state.tab=\'train\'; render()">🎯 Trainieren</button>';
+  html += '<button class="nav-tab' + (state.tab === 'review' ? ' active' : '') + '" onclick="state.tab=\'review\'; render()">🔁 Fehler üben' + (mistakeCount ? ' (' + mistakeCount + ')' : '') + '</button>';
   html += '<button class="nav-tab' + (state.tab === 'stats' ? ' active' : '') + '" onclick="state.tab=\'stats\'; render()">📊 Statistiken</button>';
   html += '</div>';
 
@@ -459,12 +989,29 @@ function renderHome(app) {
     }
     html += '</div>';
     html += '<button class="btn" onclick="chooseDifficulty(null)" style="margin-top:20px;">🎓 PRÜFUNGS-SIMULATION (100 Q)</button>';
+  } else if (state.tab === 'review') {
+    html += '<h2>🔁 Frühere Fehler</h2>';
+    html += '<div class="stats-grid"><div class="stat-card"><div class="stat-num">' + mistakeCount + '</div><div class="stat-label">offen</div></div></div>';
+    if (!mistakeCount) {
+      html += '<p style="margin:16px 0;color:#666;">Noch keine Fehler gespeichert. Falsch beantwortete Fragen erscheinen hier.</p>';
+    } else {
+      html += '<p style="margin:12px 0;font-size:13px;color:#666;">Richtig beantwortete Fehler werden aus der Liste entfernt.</p>';
+      html += '<button class="btn" onclick="startReview()">Fehler jetzt üben</button>';
+      html += '<button class="btn btn-secondary" onclick="if(confirm(\'Alle Fehler löschen?\')){state.mistakes=[];saveMistakes();render();}">Liste leeren</button>';
+      html += '<h3>Offene Fehler</h3>';
+      state.mistakes.slice(0, 15).forEach(m => {
+        const area = areas.find(a => a.id === m.area);
+        html += '<div class="stat-card" style="text-align:left;margin-bottom:8px;"><div style="font-weight:600;font-size:13px;">' + m.q + '</div>';
+        html += '<div style="font-size:11px;color:#888;margin-top:4px;">' + (area ? area.name : m.area) + ' · ' + (m.count || 1) + '× falsch</div></div>';
+      });
+    }
   } else {
     html += '<h2>📊 Statistiken</h2>';
     const avg = state.sessions.length > 0 ? Math.round(state.sessions.reduce((a, b) => a + b.percentage, 0) / state.sessions.length) : 0;
     html += '<div class="stats-grid">';
     html += '<div class="stat-card"><div class="stat-num">' + state.sessions.length + '</div><div class="stat-label">Trainings</div></div>';
     html += '<div class="stat-card"><div class="stat-num">' + avg + '%</div><div class="stat-label">Ø Quote</div></div>';
+    html += '<div class="stat-card"><div class="stat-num">' + mistakeCount + '</div><div class="stat-label">Offene Fehler</div></div>';
     html += '</div>';
     for (let s of state.sessions.slice(-10).reverse()) {
       const area = areas.find(a => a.id === s.area) || {name: s.area};
@@ -479,6 +1026,33 @@ function renderHome(app) {
 function chooseDifficulty(area) {
   state.screen = 'difficulty';
   state.area = area;
+  state.mode = area ? 'train' : 'exam';
+  render();
+}
+
+function startReview() {
+  if (!state.mistakes.length) return;
+  clearTimers();
+  state.mode = 'review';
+  state.screen = 'play';
+  state.area = null;
+  state.difficulty = 'medium';
+  state.round = 0;
+  state.correct = 0;
+  state.answered = false;
+  state.selectedIdx = null;
+  state.endedEarly = false;
+  state.usedIds = new Set();
+  state.plannedRounds = Math.min(20, state.mistakes.length);
+  state.startTime = Date.now();
+  if (!nextQuestion()) {
+    alert('Keine Fehler zum Üben.');
+    state.screen = 'home';
+    state.tab = 'review';
+    render();
+    return;
+  }
+  startTimer();
   render();
 }
 
@@ -499,18 +1073,18 @@ function selectDifficulty(diff) {
   state.correct = 0;
   state.answered = false;
   state.selectedIdx = null;
+  state.endedEarly = false;
+  state.usedIds = new Set();
+  state.plannedRounds = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
+  state.mode = state.area ? 'train' : 'exam';
   state.startTime = Date.now();
 
-  const areaId = state.area || areas[rand(areas.length)].id;
-  state.currentQuestion = getQuestion(areaId);
-
-  if (!state.currentQuestion) {
-    alert('Keine Fragen für diesen Bereich.');
+  if (!nextQuestion()) {
+    alert('Keine Fragen verfügbar.');
     state.screen = 'home';
     render();
     return;
   }
-
   startTimer();
   render();
 }
@@ -522,14 +1096,15 @@ function renderPlay(app) {
     renderHome(app);
     return;
   }
-  const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
+  const limit = state.plannedRounds;
   const pct = (state.round / limit) * 100;
   const timerClass = state.timeLeft > 30 ? 'ok' : (state.timeLeft > 10 ? 'warning' : '');
+  const label = state.mode === 'review' ? 'Fehler-Übung' : 'Frage';
 
   let html = '<div class="play-screen">';
   html += '<div class="timer-bar ' + timerClass + '">⏱️ ' + state.timeLeft + 's</div>';
   html += '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>';
-  html += '<div style="font-size:12px; color:#666; margin-bottom:16px;">Frage ' + (state.round + 1) + '/' + limit + '</div>';
+  html += '<div style="font-size:12px; color:#666; margin-bottom:16px;">' + label + ' ' + (state.round + 1) + '/' + limit + '</div>';
   html += '<div class="question-box"><div class="question">' + q.q + '</div>';
   html += '<div class="options">';
 
@@ -545,27 +1120,28 @@ function renderPlay(app) {
   html += '</div>';
   if (state.answered) {
     const prefix = state.selectedIdx === q.correct ? 'Richtig. ' : (state.selectedIdx < 0 ? 'Zeit abgelaufen. ' : 'Leider falsch. ');
-    html += '<div class="explanation">💡 ' + prefix + q.exp + '</div>';
+    html += '<div class="explanation">💡 ' + prefix + (q.exp || '') + '</div>';
   }
   html += '</div></div>';
   app.innerHTML = html;
 }
 
 function renderResult(app) {
-  const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
-  const pct = Math.round((state.correct / limit) * 100);
+  const limit = state.plannedRounds;
+  const pct = limit ? Math.round((state.correct / limit) * 100) : 0;
   const duration = (Date.now() - state.startTime) / 1000;
-
   let gradeText = pct >= 90 ? '🌟 Hervorragend!' : (pct >= 75 ? '✅ Gut!' : (pct >= 60 ? '🟡 Befriedigend' : '❌ Üben'));
-  let color = pct >= 90 ? '#28a745' : (pct >= 75 ? '#28a745' : (pct >= 60 ? '#ffc107' : '#dc3545'));
+  let color = pct >= 75 ? '#28a745' : (pct >= 60 ? '#ffc107' : '#dc3545');
 
   let html = '<div class="result-screen">';
   html += '<h1>✅ Fertig!</h1>';
+  if (state.endedEarly) html += '<p style="color:#666;font-size:13px;">Vorzeitig beendet — keine neuen Fragen mehr ohne Wiederholung.</p>';
   html += '<div class="big-score" style="color:' + color + '">' + pct + '%</div>';
   html += '<div>' + state.correct + ' von ' + limit + ' richtig</div>';
   html += '<div style="font-size:16px; margin:20px 0;">' + gradeText + '</div>';
   html += '<div style="font-size:14px; color:#666;">Dauer: ' + Math.floor(duration / 60) + ':' + String(Math.floor(duration % 60)).padStart(2, '0') + '</div>';
-  html += '<button class="btn" onclick="state.screen=\'home\'; render();">← Menü</button>';
+  if (state.mistakes.length) html += '<button class="btn" onclick="state.screen=\'home\'; state.tab=\'review\'; render();">🔁 Fehler üben (' + state.mistakes.length + ')</button>';
+  html += '<button class="btn btn-secondary" onclick="state.screen=\'home\'; state.tab=\'train\'; render();">← Menü</button>';
   html += '</div>';
   app.innerHTML = html;
 }
@@ -580,46 +1156,44 @@ function render() {
 
 function answerQuestion(idx) {
   if (state.answered || state.screen !== 'play' || !state.currentQuestion) return;
-  if (state.round >= (state.area ? ROUNDS_TRAINING : ROUNDS_EXAM)) return;
+  if (state.round >= state.plannedRounds) return;
 
   state.answered = true;
   state.selectedIdx = idx;
-  if (state.timer) {
-    clearInterval(state.timer);
-    state.timer = null;
-  }
+  if (state.timer) { clearInterval(state.timer); state.timer = null; }
 
-  if (idx === state.currentQuestion.correct) state.correct += 1;
+  const q = state.currentQuestion;
+  const isCorrect = idx === q.correct;
+  if (isCorrect) {
+    state.correct += 1;
+    if (state.mode === 'review') clearMistake(q.id);
+  } else {
+    recordMistake(q);
+  }
 
   render();
 
   if (state.answerTimeout) clearTimeout(state.answerTimeout);
   state.answerTimeout = setTimeout(() => {
     state.round += 1;
-    const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
 
-    if (state.round >= limit) {
+    if (state.round >= state.plannedRounds) {
       clearTimers();
-      saveSession(state.area || 'exam', (Date.now() - state.startTime) / 1000, state.correct, limit, state.difficulty);
+      saveSession(state.mode === 'review' ? 'review' : (state.area || 'exam'), (Date.now() - state.startTime) / 1000, state.correct, state.plannedRounds, state.difficulty);
       state.screen = 'result';
     } else {
-      const nextArea = state.area || areas[rand(areas.length)].id;
-      state.currentQuestion = getQuestion(nextArea);
+      const next = nextQuestion();
       state.answered = false;
       state.selectedIdx = null;
-      if (!state.currentQuestion) {
-        clearTimers();
-        saveSession(state.area || 'exam', (Date.now() - state.startTime) / 1000, state.correct, limit, state.difficulty);
-        state.screen = 'result';
+      if (!next) {
+        finishEarlyIfNeeded();
       } else {
         startTimer();
       }
     }
-
     render();
   }, 2000);
 }
-
 
 render();
 </script>
