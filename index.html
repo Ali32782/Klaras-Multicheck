@@ -81,7 +81,7 @@ h1, h2, h3 { margin: 16px 0 12px; }
 <div id="app"></div>
 
 <script>
-// ===== Multicheck Trainer v14: Eltern-Bericht (Share-Link, Wochenbericht, optional Firebase-Sync) =====
+// ===== Multicheck Trainer v14: generell schwerere Fragen (alle Bereiche) + Eltern-Scaffold =====
 
 const TARGET_PER_AREA = 300;
 
@@ -426,57 +426,58 @@ function generateDeutschFragenFixed() {
   }
 
   [['easy', typesEasy], ['medium', typesMed], ['hard', typesHard]].forEach(([band, arr]) => {
-    // 0 synonym
+    const off = band === 'easy' ? 8 : (band === 'medium' ? 16 : 24);
+    // 0 synonym — near-miss distractors (Gegenteil + unrelated)
     fillType(arr, band, 0, perType[0], (i, b) => {
-      const s = syn[i % syn.length];
+      const s = syn[(off + i) % syn.length];
       const stem = b === 'hard' ? 'Welches Wort ist sinnverwandt mit "' + s[0] + '" (nicht Gegenteil)?' : (b === 'medium' ? 'Nahes Synonym zu "' + s[0] + '"?' : 'Synonym von "' + s[0] + '"?');
       return makeTextQ(stem, s[1], [s[2], s[3]], b, 'Synonym zu ' + s[0], 'de-syn-' + b[0] + '-' + i);
     });
-    // 1 antonym — CAPPED, varied stems
+    // 1 antonym — plausible near-misses from synonym/related banks
     fillType(arr, band, 1, perType[1], (i, b) => {
-      const a = ant[i % ant.length];
+      const a = ant[(off + i) % ant.length];
       const stems = [
         'Gegenteil von "' + a[0] + '"?',
         'Antonym zu "' + a[0] + '"?',
         'Was ist das Gegenteil von "' + a[0] + '"?',
         '"' + a[0] + '" — welches Wort ist entgegengesetzt?'
       ];
-      const stem = stems[i % stems.length];
-      const wrong = b === 'hard' ? ['ähnlich', 'verwandt'] : ['ähnlich', 'identisch'];
-      return makeTextQ(stem, a[1], wrong, b, 'Antonym', 'de-ant-' + b[0] + '-' + i);
+      const near = syn[(off + i) % syn.length][1];
+      const wrong = padWrong(a[1], near, syn[(off + i + 3) % syn.length][0]);
+      return makeTextQ(stems[i % stems.length], a[1], wrong, b, 'Antonym', 'de-ant-' + b[0] + '-' + i);
     });
     // 2 plural
     fillType(arr, band, 2, perType[2], (i, b) => {
-      const p = plur[i % plur.length];
-      const stem = b === 'hard' ? 'Richtige Pluralform von "' + p[0] + '" (Umlaut/Endung prüfen)?' : 'Plural von "' + p[0] + '"?';
+      const p = plur[(off + i) % plur.length];
+      const stem = b === 'hard' ? 'Richtige Pluralform von "' + p[0] + '" (Umlaut/Endung prüfen)?' : (b === 'medium' ? 'Plural (Achtung Umlaut): "' + p[0] + '"?' : 'Plural von "' + p[0] + '"?');
       return makeTextQ(stem, p[1], [p[2], p[3]], b, 'Plural', 'de-pl-' + b[0] + '-' + i);
     });
-    // 3 grammar
+    // 3 grammar — hard band prefers later (harder) items
     fillType(arr, band, 3, perType[3], (i, b) => {
-      const g = grammar[i % grammar.length];
+      const g = grammar[(off + i) % grammar.length];
       const stem = b === 'easy' ? 'Grammatik: "' + g[0] + '"' : (b === 'medium' ? 'Lücke füllen: "' + g[0] + '"' : 'Anspruchsvolle Grammatik: "' + g[0] + '"');
       return makeTextQ(stem, g[1], g[2], b, g[3], 'de-gr-' + b[0] + '-' + i);
     });
-    // 4 meaning
+    // 4 meaning — skip easiest definitions on higher bands
     fillType(arr, band, 4, perType[4], (i, b) => {
-      const m = meanings[i % meanings.length];
-      const stem = b === 'hard' ? m[0].replace('Was bedeutet', 'Welche Definition trifft am besten auf') : m[0];
+      const m = meanings[(off + i) % meanings.length];
+      const stem = b === 'hard' ? m[0].replace('Was bedeutet', 'Welche Definition trifft am besten auf') : (b === 'medium' ? m[0].replace('Was bedeutet', 'Bedeutung von') : m[0]);
       return makeTextQ(stem, m[1], m[2], b, m[1], 'de-mean-' + b[0] + '-' + i);
     });
     // 5 spelling
     fillType(arr, band, 5, perType[5], (i, b) => {
-      const s = spell[i % spell.length];
-      return makeTextQ((b === 'hard' ? 'Orthografie streng: ' : '') + s[0], s[1], s[2], b, 'Rechtschreibung', 'de-sp-' + b[0] + '-' + i);
+      const s = spell[(off + i) % spell.length];
+      return makeTextQ((b === 'hard' ? 'Orthografie streng: ' : (b === 'medium' ? 'Rechtschreibung: ' : '')) + s[0], s[1], s[2], b, 'Rechtschreibung', 'de-sp-' + b[0] + '-' + i);
     });
     // 6 sentence
     fillType(arr, band, 6, perType[6], (i, b) => {
-      const s = sentences[i % sentences.length];
+      const s = sentences[(off + i) % sentences.length];
       return makeTextQ((b === 'medium' ? 'Satzergänzung: ' : (b === 'hard' ? 'Kontext Pflege/Alltag: ' : '')) + s[0], s[1], s[2], b, 'Satzbau', 'de-sent-' + b[0] + '-' + i);
     });
     // 7 word family
     fillType(arr, band, 7, perType[7], (i, b) => {
-      const f = families[i % families.length];
-      return makeTextQ(f[0], f[1], f[2], b, 'Wortfamilie', 'de-fam-' + b[0] + '-' + i);
+      const f = families[(off + i) % families.length];
+      return makeTextQ((b === 'hard' ? 'Genau: ' : '') + f[0], f[1], f[2], b, 'Wortfamilie', 'de-fam-' + b[0] + '-' + i);
     });
   });
 
@@ -822,7 +823,7 @@ function generateEnglischFragen() {
     const ePool = poolFor(band, errorsEasy, errorsMed, errorsHard);
     const rPool = poolFor(band, readingEasy, readingMed, readingHard);
     const kPool = poolFor(band, colloEasy, colloMed, colloHard);
-    const bandOff = band === 'easy' ? 0 : (band === 'medium' ? 17 : 34);
+    const bandOff = band === 'easy' ? 12 : (band === 'medium' ? 28 : 48);
 
     // 0 EN→DE vocab (14)
     fillType(arr, band, perType[0], (i, b) => {
@@ -840,7 +841,8 @@ function generateEnglischFragen() {
     });
     // 2 grammar (20) — harder pools for higher bands
     fillType(arr, band, perType[2], (i, b) => {
-      const g = gPool[i % gPool.length];
+      const pool = (b === 'easy' && i % 3 === 0) ? grammarMed : gPool;
+      const g = pool[i % pool.length];
       const stem = b === 'hard'
         ? 'Advanced grammar: "' + g[0] + '"'
         : (b === 'medium' ? 'Grammar: "' + g[0] + '"' : 'Fill in: "' + g[0] + '"');
@@ -856,7 +858,7 @@ function generateEnglischFragen() {
     fillType(arr, band, perType[4], (i, b) => {
       const a = ant[(bandOff + i) % ant.length];
       const stem = b === 'hard' ? 'Antonym / opposite of "' + a[0] + '"?' : ('Opposite of "' + a[0] + '"?');
-      return makeTextQ(stem, a[1], padWrong(a[1], a[2], syn[i % syn.length][0]), b, 'antonym', 'en-ant-' + b[0] + '-' + i);
+      return makeTextQ(stem, a[1], padWrong(a[1], a[2], syn[(bandOff + i) % syn.length][1]), b, 'antonym', 'en-ant-' + b[0] + '-' + i);
     });
     // 5 cloze / sentence completion (10)
     fillType(arr, band, perType[5], (i, b) => {
@@ -1218,7 +1220,7 @@ function generateFrenchFragen() {
     const ePool = poolFor(band, errorsEasy, errorsMed, errorsHard);
     const rPool = poolFor(band, readingEasy, readingMed, readingHard);
     const kPool = poolFor(band, colloEasy, colloMed, colloHard);
-    const bandOff = band === 'easy' ? 0 : (band === 'medium' ? 17 : 34);
+    const bandOff = band === 'easy' ? 12 : (band === 'medium' ? 28 : 48);
 
     fillType(arr, band, perType[0], (i, b) => {
       const v = vocab[(bandOff + i) % vocab.length];
@@ -1233,7 +1235,8 @@ function generateFrenchFragen() {
       return makeTextQ(stem, v[0], wrong, b, v[1] + '=' + v[0], 'fr-tr2-' + b[0] + '-' + i);
     });
     fillType(arr, band, perType[2], (i, b) => {
-      const g = gPool[i % gPool.length];
+      const pool = (b === 'easy' && i % 3 === 0) ? grammarMed : gPool;
+      const g = pool[i % pool.length];
       const stem = b === 'hard'
         ? 'Grammaire avancée: «' + g[0] + '»'
         : (b === 'medium' ? 'Grammaire: «' + g[0] + '»' : 'Complétez: «' + g[0] + '»');
@@ -1247,7 +1250,7 @@ function generateFrenchFragen() {
     fillType(arr, band, perType[4], (i, b) => {
       const a = ant[(bandOff + i) % ant.length];
       const stem = b === 'hard' ? 'Antonyme / contraire de «' + a[0] + '»?' : ('Contraire de «' + a[0] + '»?');
-      return makeTextQ(stem, a[1], padWrong(a[1], a[2], syn[i % syn.length][0]), b, 'antonym', 'fr-ant-' + b[0] + '-' + i);
+      return makeTextQ(stem, a[1], padWrong(a[1], a[2], syn[(bandOff + i) % syn.length][1]), b, 'antonym', 'fr-ant-' + b[0] + '-' + i);
     });
     fillType(arr, band, perType[5], (i, b) => {
       const s = cPool[i % cPool.length];
@@ -1530,105 +1533,98 @@ function generateLogicFragen() {
 // ---------- SCIENCE ----------
 function generateScienceFragen() {
   const easyFacts = [
-    ['Welches Gas brauchen wir zum Atmen?', 'Sauerstoff', ['Helium','Stickstoff allein']],
-    ['Wasser gefriert bei?', '0 °C', ['100 °C','50 °C']],
-    ['Größter Planet im Sonnensystem?', 'Jupiter', ['Erde','Mars']],
-    ['Blut pumpt welches Organ?', 'Herz', ['Leber','Magen']],
-    ['Photosynthese braucht vor allem?', 'Licht', ['nur Dunkelheit','nur Salz']],
-    ['pH 7 ist?', 'neutral', ['sauer','basisch']],
+    ['Welches Gas brauchen wir zum Atmen?', 'Sauerstoff', ['Stickstoff allein','Kohlendioxid']],
+    ['Wasser gefriert bei Normaldruck bei?', '0 °C', ['−10 °C','100 °C']],
+    ['Größter Planet im Sonnensystem?', 'Jupiter', ['Saturn','Erde']],
+    ['Welches Organ pumpt Blut?', 'Herz', ['Leber','Milz']],
+    ['Photosynthese braucht vor allem?', 'Licht (+CO₂/Wasser)', ['nur Dunkelheit','nur Salz']],
+    ['pH 7 bedeutet?', 'neutral', ['stark sauer','stark basisch']],
     ['Erdanziehung heißt?', 'Gravitation', ['Magnetismus','Reibung']],
-    ['Ruhepuls Erwachsene ca.?', '60–80/min', ['10/min','200/min']],
-    ['Siedepunkt Wasser (normal)?', '100 °C', ['0 °C','50 °C']],
-    ['Planet der Menschen?', 'Erde', ['Mars','Venus']],
-    ['Haut schützt vor?', 'Keimen/Verletzung', ['nur Hunger','nur Durst']],
-    ['Lunge nimmt vor allem auf?', 'Sauerstoff', ['nur CO2 rein','Helium']],
-    ['Nerven leiten?', 'Signale', ['Blut','Luft']],
-    ['Impfung dient der?', 'Prävention', ['Dekoration','nur Mode']],
-    ['Normaltemperatur Körper ca.?', '37 °C', ['30 °C','45 °C']],
-    ['CO2 wird abgegeben über?', 'Atmung', ['nur Hautporen','nur Niere allein']],
-    ['Rotes Blutkörperchen transportiert?', 'Sauerstoff', ['nur Hormone','nur Fett']],
-    ['Welche Struktur speichert Urin?', 'Blase', ['Magen','Herz']],
-    ['Mond umkreist?', 'Erde', ['Sonne direkt als Planet','Mars']],
-    ['Photosynthese Produkt u.a.?', 'Sauerstoff', ['nur Stickstoff','Helium']],
-    ['Knochen schützen u.a.?', 'Organe', ['nur Haare','nur Nägel']],
+    ['Typischer Ruhepuls Erwachsene?', 'ca. 60–80/min', ['ca. 20/min','ca. 160/min']],
+    ['Siedepunkt Wasser (1 atm)?', '100 °C', ['80 °C','0 °C']],
+    ['CO₂ wird vor allem abgegeben über?', 'Atmung', ['nur Niere','nur Haut']],
+    ['Rotes Blutkörperchen transportiert vor allem?', 'Sauerstoff', ['nur Hormone','nur Harnstoff']],
+    ['Impfung dient primär der?', 'Prävention', ['Dekoration','nur Diagnose']],
+    ['Normaltemperatur Körper ca.?', '37 °C', ['32 °C','42 °C']],
+    ['Nerven leiten?', 'elektrische/chemische Signale', ['Blut','Luft']],
+    ['Mond umkreist?', 'die Erde', ['direkt nur die Sonne als Planet','Mars']],
+    ['Produkt der Photosynthese u.a.?', 'Sauerstoff', ['Helium','nur Stickstoff']],
     ['Magen gehört zum?', 'Verdauungssystem', ['Hörsystem','nur Haut']],
-    ['Augen nehmen wahr?', 'Licht', ['nur Geruch','nur Schall allein']],
-    ['Trinkwasser sollte sein?', 'keimarm/sauber', ['immer salzig','immer trüb']],
-    ['Fieber ist oft Zeichen von?', 'Infekt/Abwehr', ['garantiert Gesundheit','nur Hunger']]
+    ['Fieber ist oft Zeichen von?', 'Infekt/Abwehrreaktion', ['garantierter Gesundheit','nur Durst']],
+    ['Knochen schützen u.a.?', 'Organe', ['nur Haare','nur Nägel']],
+    ['Lunge nimmt vor allem auf?', 'Sauerstoff', ['nur CO₂ rein','Helium']],
+    ['Haut schützt vor?', 'Keimen/Verletzung/Austrocknung', ['nur Hunger','nur Durst']],
+    ['Blase speichert?', 'Urin', ['Galle','Blutplasma allein']],
+    ['Vitamin D entsteht u.a. durch?', 'Sonnenlicht/UV', ['nur Eisen','nur Salz']],
+    ['Insulin reguliert vor allem?', 'Blutzucker', ['nur Hörvermögen','nur Haarwachstum']],
+    ['Antibiotika wirken gegen?', 'Bakterien (nicht Viren generell)', ['Viren immer','nur Pilze immer']]
   ];
   const medFacts = [
-    ['Knochen Erwachsene ca.?', '206', ['100','500']],
+    ['Knochenanzahl Erwachsene ca.?', '206', ['106','306']],
     ['DNA speichert?', 'Erbinformation', ['nur Zucker','nur Fett']],
-    ['Antibiotika wirken gegen?', 'Bakterien', ['Viren immer','nur Pilze']],
-    ['Hauptaufgabe der Niere?', 'Blut filtrieren', ['Verdauung','Hormonsingen']],
-    ['Schall braucht zum Ausbreiten?', 'Medium', ['Vakuum','nur Licht']],
-    ['Mitochondrien sind?', 'Zell-Kraftwerke', ['Zellkern','Zellwand']],
-    ['Systole ist?', 'Herzkontraktion', ['Herzpause','nur Vorhof']],
+    ['Hauptaufgabe der Niere?', 'Blut filtrieren / Ausscheidung', ['Verdauung','Hormonsynthese allein']],
+    ['Schall braucht zum Ausbreiten?', 'ein Medium', ['Vakuum','nur Licht']],
+    ['Mitochondrien sind?', 'Zell-Kraftwerke (ATP)', ['Zellkern','Zellwand']],
+    ['Systole ist?', 'Kontraktionsphase', ['reine Pause','nur Vorhofrelaxation']],
     ['Knochenmark bildet?', 'Blutkörperchen', ['Galle','Speichel']],
-    ['Insulin reguliert?', 'Blutzucker', ['nur Hörvermögen','nur Haar']],
-    ['Vitamin D entsteht u.a. durch?', 'Sonnenlicht', ['nur Eisen','nur Salz']],
-    ['Weißes Blutkörperchen Aufgabe?', 'Abwehr', ['Sauerstofftransport','Gerinnung allein']],
-    ['Hämoglobin bindet?', 'Sauerstoff', ['nur Calcium','nur Natrium']],
-    ['pH Magen eher?', 'sauer', ['basisch','neutral 7']],
-    ['Welches Organ produziert Galle?', 'Leber', ['Milz','Lunge']],
+    ['Hämoglobin bindet vor allem?', 'Sauerstoff', ['Calcium','Natrium']],
+    ['pH im Magen eher?', 'sauer', ['basisch','neutral 7']],
+    ['Galle wird produziert in der?', 'Leber', ['Milz','Lunge']],
     ['Pathogen bedeutet?', 'Krankheitserreger', ['Heilmittel','Nährstoff']],
-    ['Welche Einheit Energie?', 'Joule', ['Newton','Ampere']],
-    ['Zellkern enthält?', 'DNA', ['nur Wasser','nur Fett']],
+    ['Energie-Einheit SI?', 'Joule', ['Newton','Ampere']],
+    ['Zellkern enthält vor allem?', 'DNA', ['nur Wasser','nur Fett']],
     ['Diastole ist eher?', 'Entspannungs-/Füllphase', ['nur Kontraktion','nur Atemzug']],
     ['Plasmaanteil Blut ungefähr?', 'ca. 55%', ['ca. 5%','ca. 95%']],
-    ['Lymphsystem hilft bei?', 'Abwehr/Flüssigkeitsbalance', ['nur Knochenwachstum','nur Hörschärfe']],
+    ['Lymphsystem hilft bei?', 'Abwehr & Flüssigkeitsbalance', ['nur Knochenwachstum','nur Hörschärfe']],
     ['Enzyme sind meist?', 'Proteine', ['reine Fette','reine DNA']],
-    ['Diffusion geht von?', 'hoch → niedrig Konzentration', ['niedrig → hoch immer','nur mit Pumpe']],
+    ['Diffusion geht typisch?', 'hoch → niedrig Konzentration', ['niedrig → hoch ohne Hilfe','nur mit Licht']],
     ['Homeostase bedeutet?', 'Gleichgewicht halten', ['Chaos maximieren','nur Wachstum']],
-    ['Adrenalin wirkt u.a.?', 'aktivierend/Stressantwort', ['nur verdauungshemmend nie','nur Schlaf']],
-    ['Kapillaren sind?', 'feinste Blutgefäße', ['größte Arterien','Knochen']]
+    ['Adrenalin wirkt u.a.?', 'aktivierend (Stressantwort)', ['rein verdauungsfördernd','nur Schlaf']],
+    ['Kapillaren sind?', 'feinste Blutgefäße', ['größte Arterien','Lymphknoten']],
+    ['Weißes Blutkörperchen Aufgabe?', 'Abwehr', ['Sauerstofftransport','Gerinnung allein']],
+    ['Osmose ist?', 'Diffusion durch semipermeable Membran', ['reine Verbrennung','Magnetismus']],
+    ['Nosokomial heißt?', 'im Krankenhaus erworben', ['endemisch','pandemisch']],
+    ['Vitamin-C-Mangel → klassisch?', 'Skorbut', ['Rachitis','Pellagra']]
   ];
   const hardFacts = [
-    ['Vitamin-C-Mangel kann führen zu?', 'Skorbut', ['Rachitis','nur B12-Mangel']],
-    ['Ohmsches Gesetz: U = ?', 'R · I', ['U + I','m + a']],
-    ['Nosokomial bedeutet?', 'Krankenhausinfektion', ['Endemie','Pandemie']],
-    ['Isotope unterscheiden sich in?', 'Neutronenzahl', ['Protonenzahl immer','nur Name']],
-    ['Katalysator…', 'senkt Aktivierungsenergie', ['wird verbraucht','ändert Gleichgewicht dauerhaft']],
-    ['Welche Blutgruppe ist Universalspender (klassisch)?', '0', ['AB','nur A']],
-    ['Osmose beschreibt?', 'Diffusion durch Membran', ['nur Verbrennung','nur Magnetismus']],
-    ['Welche Vitamin-Gruppe wasserlöslich?', 'C und B', ['A/D/E/K','nur K']],
-    ['Enzym ist?', 'Biokatalysator', ['Hormon immer','Vitamin immer']],
-    ['Sterilisation bedeutet?', 'Keimfreiheit anstreben', ['nur Putzen','nur Kühlen']],
-    ['Desinfektion…', 'reduziert Keime stark', ['macht immer steril','ist nur Duft']],
-    ['Lichtgeschwindigkeit grob?', '3×10⁸ m/s', ['3 m/s','300 m/s']],
-    ['Negatives Feedback dient oft der?', 'Stabilisierung', ['immer Eskalation','nur Zufall']],
-    ['ATP ist vor allem?', 'Energiewährung der Zelle', ['reines Abfallprodukt','nur Hormon']],
-    ['Halbwertszeit beschreibt?', 'Zeit bis Menge halbiert', ['immer Verdopplung','nur Temperatur']],
-    ['pH 2 im Vergleich zu pH 4?', '100× saurer', ['2× saurer','gleich']],
-    ['Aktives Transport braucht?', 'Energie (z.B. ATP)', ['nie Energie','nur Zufall']],
-    ['Antigen ist?', 'Erkennungsstruktur für Immunsystem', ['immer Antikörper','nur Vitamin']],
-    ['Respiration zellulär liefert vor allem?', 'ATP (+CO2/H2O)', ['nur Licht','nur DNA']],
-    ['Hyperton bedeutet grob?', 'zu hoher Druck/Tonus-Kontext', ['immer zu niedrig','nur Farbe']],
-    ['Hämatokrit misst grob?', 'Anteil fester Blutbestandteile', ['nur Blutzucker','nur pH']],
-    ['Niereninsuffizienz betrifft vor allem?', 'Filtration/Ausscheidung', ['nur Hörvermögen','nur Haarwachstum']],
-    ['Sepsis ist?', 'lebensbedrohliche Fehlreaktion auf Infekt', ['immer harmlos','nur Erkältung']],
-    ['Latenzzeit bedeutet?', 'Verzögerung bis Wirkung/Symptom', ['sofortige Wirkung immer','nur Farbe']],
-    ['Komorbidität heißt?', 'Begleiterkrankung(en)', ['nur Heilung','nur Impfung']]
+    ['Ohmsches Gesetz: U = ?', 'R · I', ['R + I','I / R²']],
+    ['Isotope unterscheiden sich in?', 'Neutronenzahl', ['Protonenzahl (Elementwechsel)','nur Namen']],
+    ['Katalysator…', 'senkt Aktivierungsenergie', ['wird stöchiometrisch verbraucht','verschiebt Keq dauerhaft']],
+    ['Klassischer Universalspender Blut?', '0', ['AB','nur A']],
+    ['Wasserlösliche Vitamine u.a.?', 'C und B-Gruppe', ['A/D/E/K','nur K']],
+    ['Enzym ist?', 'Biokatalysator', ['immer Hormon','immer Vitamin']],
+    ['Sterilisation strebt an?', 'Keimfreiheit', ['nur Reinigung','nur Kühlung']],
+    ['Desinfektion…', 'reduziert Keime stark (nicht immer steril)', ['garantiert Sterilität','ist nur Duft']],
+    ['c Licht grob?', '3×10⁸ m/s', ['3×10³ m/s','3×10⁵ m/s']],
+    ['Negatives Feedback dient oft?', 'Stabilisierung', ['Eskalation','nur Zufall']],
+    ['ATP ist vor allem?', 'Energiewährung der Zelle', ['Abfallprodukt','Hormon']],
+    ['Halbwertszeit beschreibt?', 'Zeit bis Menge/Aktivität halbiert', ['Verdopplungszeit','nur Temperatur']],
+    ['pH 2 vs pH 4?', '100× saurer', ['2× saurer','gleich']],
+    ['Aktiver Transport braucht?', 'Energie (z.B. ATP)', ['nie Energie','nur Zufall']],
+    ['Antigen ist?', 'Struktur, die Immunantwort auslösen kann', ['immer Antikörper','Vitamin']],
+    ['Zelluläre Respiration liefert vor allem?', 'ATP (+CO₂/H₂O)', ['nur Licht','nur DNA']],
+    ['Hämatokrit misst grob?', 'Anteil zellulärer Blutbestandteile', ['nur Blutzucker','nur pH']],
+    ['Sepsis ist?', 'lebensbedrohliche Fehlreaktion auf Infekt', ['harmlose Erkältung','nur lokale Wunde']],
+    ['Komorbidität heißt?', 'Begleiterkrankung(en)', ['Heilung','Impfung']],
+    ['Latenzzeit bedeutet?', 'Verzögerung bis Wirkung/Symptom', ['sofortige Wirkung','nur Farbe']],
+    ['Niereninsuffizienz betrifft vor allem?', 'Filtration/Ausscheidung', ['Hörvermögen','Haarwachstum']],
+    ['Hypertonie bedeutet grob?', 'zu hoher Blutdruck', ['zu niedriger Puls immer','nur Fieber']],
+    ['Second-messenger-Systeme…', 'verstärken/übertragen Signal in der Zelle', ['ersetzen DNA','ersetzen Knochen']],
+    ['Respiratorische Azidose oft durch?', 'CO₂-Retention', ['nur O₂-Überschuss','nur Natriummangel']],
+    ['Selektiv permeable Membran…', 'lässt bestimmte Stoffe passieren', ['ist immer undurchlässig','lässt alles gleich']]
   ];
-
   const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
     const f = easyFacts[i % easyFacts.length];
-    const stem = (i % 3 === 0) ? f[0] : ((i % 3 === 1) ? ('Grundwissen: ' + f[0]) : ('Was trifft zu? ' + f[0]));
-    easy.push(makeTextQ(stem, f[1], f[2], 'easy', f[1], 'sci-e-' + i));
+    easy.push(makeTextQ((i%2?'Grundwissen: ':'') + f[0], f[1], f[2], 'easy', f[1], 'sci-e-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const f = medFacts[i % medFacts.length];
-    const distract = f[2].slice();
-    if (i % 4 === 0) distract[0] = 'teilweise richtig, aber ungenau: ' + distract[0];
-    medium.push(makeTextQ('Fachwissen: ' + f[0], f[1], distract, 'medium', f[1], 'sci-m-' + i));
+    medium.push(makeTextQ('Fachwissen: ' + f[0], f[1], ['nahe, aber falsch: ' + f[2][0], f[2][1]], 'medium', f[1], 'sci-m-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const f = hardFacts[i % hardFacts.length];
-    const t = i % 3;
-    if (t === 0) hard.push(makeTextQ('Anspruchsvoll / Abgrenzung: ' + f[0], f[1], f[2], 'hard', f[1], 'sci-h-' + i));
-    else if (t === 1) hard.push(makeTextQ('Welche Antwort ist fachlich korrekt? ' + f[0], f[1], ['nahe, aber falsch: ' + f[2][0], f[2][1]], 'hard', f[1], 'sci-h2-' + i));
-    else hard.push(makeTextQ('Schließen Sie präzise: ' + f[0].replace('?', '') + ' — beste Option?', f[1], f[2], 'hard', f[1], 'sci-h3-' + i));
+    hard.push(makeTextQ((i%2?'Abgrenzung: ':'Präzise: ') + f[0], f[1], ['nahe, aber falsch: ' + f[2][0], f[2][1]], 'hard', f[1], 'sci-h-' + i));
   }
   return assemble300(easy, medium, hard);
 }
@@ -1674,7 +1670,8 @@ function generateOrganisationFragen() {
       medium.push(makeNumQ('Budget ' + budget + '; −' + pct + '%, dann −' + spent2 + '. Rest?', rest, 'medium', 'Rest nach % und Fix', 'org-m-b-' + i));
     } else if (t === 1) {
       const need = 7 + (i % 5), have = 2 + (i % 4), block = 1 + (i % 3);
-      medium.push(makeTextQ('Brauch ' + need + 'h, frei ' + have + 'h, Blocker ' + block + 'h. Effektive Lücke?', String(need - have + block) + 'h', [String(need - have) + 'h', String(have + block) + 'h'], 'medium', 'Lücke inkl. Blocker', 'org-m-g-' + i));
+      const gap = need - have + block;
+      medium.push(makeTextQ('Brauch ' + need + 'h, frei ' + have + 'h, Blocker ' + block + 'h. Effektive Lücke?', String(gap) + 'h', padWrong(String(gap) + 'h', String(need - have) + 'h', String(need + block) + 'h'), 'medium', 'Lücke inkl. Blocker', 'org-m-g-' + i));
     } else if (t === 2) {
       medium.push(makeTextQ('Eisenhower: was zuerst?', 'dringend und wichtig', ['dringend aber unwichtig zuerst immer','nicht dringend/wichtig ignorieren'], 'medium', 'Q1', 'org-m-e-' + i));
     } else if (t === 3) {
@@ -1727,39 +1724,42 @@ function generateConcentrationFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const a = 4 + (i % 3), b = 2 + (i % 2), c = 1 + (i % 2);
+      const a = 5 + (i % 3), b = 3 + (i % 2), c = 2 + (i % 2);
       const s = '●'.repeat(a) + '◇'.repeat(b) + '○'.repeat(c);
       const ans = a >= b && a >= c ? '●' : (b >= c ? '◇' : '○');
-      easy.push(makeTextQ('Welches Symbol am häufigsten? ' + s, ans, [['●','◇','○'].filter(x => x !== ans)[0], ['●','◇','○'].filter(x => x !== ans)[1] || '□'], 'easy', ans + ' führt', 'co-e-s-' + i));
+      const others = ['●','◇','○'].filter(x => x !== ans);
+      easy.push(makeTextQ('Häufigstes Symbol? ' + s, ans, others, 'easy', ans, 'co-e-s-' + i));
     } else if (t === 1) {
-      const n = 7 + (i % 8);
-      easy.push(makeNumQ('Zählen Sie: wie viele Zeichen in "' + 'X'.repeat(n) + '"?', n, 'easy', 'zählen', 'co-e-x-' + i));
+      const n = 11 + (i % 10);
+      easy.push(makeNumQ('Anzahl Zeichen in "' + 'Z'.repeat(n) + '"?', n, 'easy', 'zählen', 'co-e-x-' + i));
     } else if (t === 2) {
-      const arr = [2, 4, 6, 8, 10]; arr[i % 5] = 7 + (i % 3);
-      easy.push(makeTextQ('Welche Zahl stört die geraden Schritte? ' + arr.join(','), String(arr[i % 5]), ['2','10'], 'easy', 'ungerade Störer', 'co-e-o-' + i));
+      const arr = [3,6,9,12,15];
+      const spoil = 14 + (i % 3) === 15 ? 16 : 14 + (i % 3);
+      arr[i % 5] = spoil;
+      easy.push(makeTextQ('Was stört die +3-Reihe? ' + arr.join(','), String(spoil), padWrong(String(spoil), '3', '12'), 'easy', 'Störer', 'co-e-o-' + i));
     } else {
-      const target = (i % 9) + 1;
-      const row = [3, 1, 4, 1, 5, 9, 2, 6, 5, target, 3, 5];
+      const target = 1 + (i % 9);
+      const row = [2,7,1,8,2,8,1,target,4,target,5,9,target];
       let cnt = 0; for (const x of row) if (x === target) cnt++;
-      easy.push(makeNumQ('Wie oft kommt ' + target + ' vor? ' + row.join(' '), cnt, 'easy', 'zählen', 'co-e-cnt-' + i));
+      easy.push(makeNumQ('Wie oft ' + target + ' in: ' + row.join(' ') + '?', cnt, 'easy', 'zählen', 'co-e-cnt-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const word = ['BANANA','MISSISSIPPI','PFLEGEFACHPERSON','KONZENTRATION','GESUNDHEITSSYSTEM','MULTICHECKTRAINING','SCHWEIZERDEUTSCH','DOKUMENTATION'][i % 8];
-      const ch = word[(i * 3) % word.length];
+      const word = ['PFLEGEFACHPERSON','KONZENTRATIONSTEST','GESUNDHEITSSYSTEM','DOKUMENTATIONSPFLICHT','MULTICHECKTRAINING','SCHWEIZERDEUTSCH','WAHRNEHMUNGSGENAUIGKEIT','AUFMERKSAMKEITSSPANNE'][i % 8];
+      const ch = word[(i * 5) % word.length];
       let cnt = 0; for (const c of word) if (c === ch) cnt++;
       medium.push(makeNumQ('Wie oft "' + ch + '" in ' + word + '?', cnt, 'medium', 'zählen', 'co-m-l-' + i));
     } else if (t === 1) {
-      const a = 'ABRACADABRA', target = a[(i * 2) % a.length];
+      const a = 'ABRACADABRA', target = a[(i * 3) % a.length];
       let cnt = 0; for (const c of a) if (c === target) cnt++;
       medium.push(makeNumQ('In ABRACADABRA: wie oft "' + target + '"?', cnt, 'medium', 'zählen', 'co-m-a-' + i));
     } else if (t === 2) {
-      const seq = [2, 4, 6, 8, 9, 10, 12];
-      medium.push(makeTextQ('Finde den Fehler in gerader Folge: ' + seq.join(','), '9', ['2','12'], 'medium', '9 ungerade', 'co-m-f-' + i));
+      const seq = [5,10,15,20,26,30];
+      medium.push(makeTextQ('Fehler in +5-Idee: ' + seq.join(','), '26', ['5','30'], 'medium', '26 statt 25', 'co-m-f-' + i));
     } else {
-      const s = '●◇○●◇●○●◇○●';
+      const s = '●◇○●◇●○●◇○●◇';
       const target = ['●','◇','○'][i % 3];
       let cnt = 0; for (const c of s) if (c === target) cnt++;
       medium.push(makeNumQ('In "' + s + '": Anzahl ' + target + '?', cnt, 'medium', 'zählen', 'co-m-sym-' + i));
@@ -1768,25 +1768,22 @@ function generateConcentrationFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const wrong = 2 + (i % 11), total = 35 + (i % 12) * 5;
-      hard.push(makeNumQ(wrong + ' von ' + total + ' falsch. Prozentfehler (1 Dezimal)?', Math.round((wrong / total) * 1000) / 10, 'hard', wrong + '/' + total, 'co-h-p-' + i));
+      const wrong = 3 + (i % 12), total = 48 + (i % 14) * 4;
+      hard.push(makeNumQ(wrong + '/' + total + ' falsch → %-Fehler (1 Dez.)?', Math.round(wrong / total * 1000) / 10, 'hard', 'Prozent', 'co-h-p-' + i));
     } else if (t === 1) {
-      const s = '●◇○●◇●○●◇○●◇●○';
-      let cnt = 0; for (const c of s) if (c === '●') cnt++;
-      const also = [...s].filter(c => c === '◇').length;
-      hard.push(makeNumQ('"' + s + '": ● minus ◇ = ?', cnt - also, 'hard', 'Differenz Symbole', 'co-h-s-' + i));
+      const s = '●◇○●◇●○●◇○●◇●○◇';
+      const black = [...s].filter(c => c === '●').length;
+      const dia = [...s].filter(c => c === '◇').length;
+      hard.push(makeNumQ('"' + s + '": ● − ◇ = ?', black - dia, 'hard', 'Differenz', 'co-h-s-' + i));
     } else if (t === 2) {
-      const w = ['KONZENTRIEREN','AUFMERKSAMKEIT','WAHRNEHMUNG','PRAEZISIONSTEST'][i % 4];
+      const w = ['KONZENTRIEREN','AUFMERKSAMKEIT','WAHRNEHMUNG','PRAEZISIONSTEST','DOKUMENTATION'][i % 5];
       const v = [...w].filter(c => 'AEIOU'.includes(c)).length;
-      const k = w.length - v;
-      hard.push(makeNumQ('In "' + w + '": |Vokale − Konsonanten|?', Math.abs(v - k), 'hard', 'Vokal/Konsonant', 'co-h-v-' + i));
+      hard.push(makeNumQ('"' + w + '": |Vokale − Konsonanten|?', Math.abs(v - (w.length - v)), 'hard', 'V/K', 'co-h-v-' + i));
     } else {
-      // count pattern transitions
-      const s = 'AABABBABAAB';
+      const s = 'AABBAABABAABBA';
       let trans = 0;
-      for (let k = 1; k < s.length; k++) if (s[k] !== s[k - 1]) trans++;
-      const add = (i % 3);
-      hard.push(makeNumQ('Übergänge (Buchstabenwechsel) in "' + s + '"' + (add ? ' plus ' + add : '') + '?', trans + add, 'hard', 'Transitions', 'co-h-tr-' + i));
+      for (let k = 1; k < s.length; k++) if (s[k] !== s[k-1]) trans++;
+      hard.push(makeNumQ('Buchstabenwechsel in "' + s + '"?', trans, 'hard', 'Transitions', 'co-h-tr-' + i));
     }
   }
   return assemble300(easy, medium, hard);
@@ -1794,34 +1791,32 @@ function generateConcentrationFragen() {
 
 // ---------- MEMORY ----------
 function generateMemoryFragen() {
-  const words = ['Ball','Baum','Auto','Haus','Stift','Lampe','Tasse','Buch','Hund','Katze','Milch','Brot','Zürich','Bern','Sonne','Mond','Stern','Schlüssel','Handy','Tisch','Stuhl','Fenster','Tür','Wasser','Apfel','Birne','Schule','Arzt','Pflege','Herz','Puls','Verband','Termin','Dosis'];
+  const words = ['Ball','Baum','Auto','Haus','Stift','Lampe','Tasse','Buch','Hund','Katze','Milch','Brot','Zürich','Bern','Sonne','Mond','Stern','Schlüssel','Handy','Tisch','Stuhl','Fenster','Tür','Wasser','Apfel','Birne','Schule','Arzt','Pflege','Herz','Puls','Verband','Termin','Dosis','Protokoll','Hygiene'];
   const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
     const t = i % 3;
-    const w = [words[i % words.length], words[(i + 3) % words.length], words[(i + 7) % words.length], words[(i + 11) % words.length]];
-    if (t === 0) easy.push(makeTextQ('Merke: ' + w.slice(0, 3).join(', ') + '. Welches war dabei?', w[1], ['Vulkan','Laptop'], 'easy', w[1], 'mem-e-1-' + i));
-    else if (t === 1) easy.push(makeTextQ('Merke: ' + w.slice(0, 3).join(', ') + '. Was war NICHT dabei?', 'Vulkan', [w[0], w[2]], 'easy', 'Vulkan fehlte', 'mem-e-2-' + i));
-    else easy.push(makeTextQ('Merke Reihenfolge: ' + w.slice(0, 3).join(' → ') + '. Was war zuerst?', w[0], [w[1], w[2]], 'easy', 'erster', 'mem-e-3-' + i));
+    const w = [words[i%words.length], words[(i+3)%words.length], words[(i+7)%words.length], words[(i+11)%words.length]];
+    if (t === 0) easy.push(makeTextQ('Merke: ' + w.slice(0,4).join(', ') + '. Welches war dabei?', w[2], [words[(i+15)%words.length], 'Vulkan'], 'easy', w[2], 'mem-e-1-' + i));
+    else if (t === 1) easy.push(makeTextQ('Merke: ' + w.slice(0,4).join(', ') + '. Was war NICHT dabei?', 'Laptop', [w[1], w[3]], 'easy', 'Laptop fehlte', 'mem-e-2-' + i));
+    else easy.push(makeTextQ('Reihenfolge: ' + w.slice(0,4).join(' → ') + '. Was war 2.?', w[1], [w[0], w[3]], 'easy', 'zweiter', 'mem-e-3-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 3;
-    const w = [words[i % words.length], words[(i + 2) % words.length], words[(i + 4) % words.length], words[(i + 6) % words.length], words[(i + 8) % words.length]];
-    if (t === 0) medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war 3.?', w[2], [w[0], w[4]], 'medium', '3.=' + w[2], 'mem-m-1-' + i));
-    else if (t === 1) medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war zuletzt?', w[4], [w[0], w[2]], 'medium', 'letzt=' + w[4], 'mem-m-2-' + i));
-    else medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was kam direkt nach "' + w[1] + '"?', w[2], [w[0], w[3]], 'medium', 'Nachfolger', 'mem-m-3-' + i));
+    const w = [0,1,2,3,4,5].map(k => words[(i + k*2) % words.length]);
+    if (t === 0) medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war 4.?', w[3], [w[1], w[5]], 'medium', '4.='+w[3], 'mem-m-1-' + i));
+    else if (t === 1) medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war zuletzt?', w[5], [w[0], w[3]], 'medium', 'letzt', 'mem-m-2-' + i));
+    else medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Direkt nach "' + w[2] + '"?', w[3], [w[1], w[4]], 'medium', 'Nachfolger', 'mem-m-3-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
-    const nums = [3 + (i % 9), 5 + (i % 8), 8 + (i % 7), 2 + (i % 6), 9 + (i % 5), 4 + (i % 4)];
-    if (t === 0) hard.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Produkt Stelle 1×3?', nums[0] * nums[2], 'hard', 'Produkt', 'mem-h-1-' + i));
-    else if (t === 1) hard.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Summe Stelle 2+4+6?', nums[1] + nums[3] + nums[5], 'hard', 'Summe', 'mem-h-2-' + i));
+    const nums = [4+(i%9), 7+(i%8), 11+(i%7), 3+(i%6), 13+(i%5), 6+(i%4), 9+(i%3)];
+    if (t === 0) hard.push(makeNumQ('Sequenz: ' + nums.slice(0,6).join(',') + '. Produkt 1×4?', nums[0]*nums[3], 'hard', 'Produkt', 'mem-h-1-' + i));
+    else if (t === 1) hard.push(makeNumQ('Sequenz: ' + nums.slice(0,6).join(',') + '. Summe 2+4+6?', nums[1]+nums[3]+nums[5], 'hard', 'Summe', 'mem-h-2-' + i));
     else if (t === 2) {
       const five = nums.slice(0, 5);
-      const med = [...five].sort((a, b) => a - b)[2];
-      const wrong = padWrong(String(med), String(med + 1 + (i % 3)), String(med - 1 - (i % 2)));
-      hard.push(makeTextQ('Sequenz: ' + five.join(',') + '. Median (Sortierung)?', String(med), wrong, 'hard', 'Median', 'mem-h-3-' + i));
-    }
-    else hard.push(makeNumQ('Sequenz: ' + nums.join(',') + '. (1.+2.) − letzte?', nums[0] + nums[1] - nums[5], 'hard', 'Kombi', 'mem-h-4-' + i));
+      const med = [...five].sort((a,b)=>a-b)[2];
+      hard.push(makeTextQ('Sequenz: ' + five.join(',') + '. Median?', String(med), padWrong(String(med), String(med+2), String(med-2)), 'hard', 'Median', 'mem-h-3-' + i));
+    } else hard.push(makeNumQ('Sequenz: ' + nums.slice(0,6).join(',') + '. (1.+3.) − letzte?', nums[0]+nums[2]-nums[5], 'hard', 'Kombi', 'mem-h-4-' + i));
   }
   return assemble300(easy, medium, hard);
 }
@@ -1832,53 +1827,52 @@ function generateSpatialFragen() {
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const top = 1 + (i % 6), bottom = 7 - top;
-      easy.push(makeNumQ('Würfel: oben ' + top + ' (Gegenüber summiert 7). Unten?', bottom, 'easy', 'Summe 7', 'sp-e-d-' + i));
+      const top = 1 + (i % 6);
+      easy.push(makeNumQ('Würfel gegenüber Summe 7: oben ' + top + ' → unten?', 7 - top, 'easy', 'Summe 7', 'sp-e-d-' + i));
     } else if (t === 1) {
-      const side = 3 + (i % 9);
+      const side = 5 + (i % 10);
       easy.push(makeNumQ('Quadrat Seite ' + side + '. Umfang?', 4 * side, 'easy', '4a', 'sp-e-u-' + i));
     } else if (t === 2) {
-      easy.push(makeTextQ('Von oben auf Becher/Zylinder: typische Form?', 'Kreis', ['Dreieck','Würfel'], 'easy', 'Draufsicht', 'sp-e-v-' + i));
-    } else {
-      const w = 3 + (i % 6), h = 2 + (i % 5);
+      const w = 4 + (i % 7), h = 3 + (i % 6);
       easy.push(makeNumQ('Rechteck ' + w + '×' + h + '. Fläche?', w * h, 'easy', 'a·b', 'sp-e-a-' + i));
-    }
-  }
-  for (let i = 0; i < 100; i++) {
-    const t = i % 4;
-    if (t === 0) {
-      const w = 3 + (i % 7), h = 2 + (i % 6), s = 2 + (i % 3);
-      medium.push(makeNumQ('Rechteck ' + w + '×' + h + ', Skalierung ×' + s + '. Neue Fläche?', (w * s) * (h * s), 'medium', 'Fläche × s²', 'sp-m-a-' + i));
-    } else if (t === 1) {
-      const a = 4 + (i % 9);
-      medium.push(makeNumQ('Würfel Kante ' + a + '. Oberfläche?', 6 * a * a, 'medium', '6a²', 'sp-m-s-' + i));
-    } else if (t === 2) {
-      medium.push(makeTextQ('Netz eines Würfels: wie viele Quadrate?', '6', ['4','8'], 'medium', '6 Flächen', 'sp-m-n-' + i));
     } else {
-      const r = 3 + (i % 6);
-      medium.push(makeNumQ('Kreis Radius ' + r + '. Umfang grob mit π≈3? (3·2r)', 6 * r, 'medium', '2πr ≈ 6r', 'sp-m-c-' + i));
+      easy.push(makeTextQ('Draufsicht Zylinder/Becher typisch?', 'Kreis', ['Dreieck','Quadrat immer'], 'easy', 'Draufsicht', 'sp-e-v-' + i));
     }
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     if (t === 0) {
-      const n = 5 + (i % 5);
-      const ang = ((n - 2) * 180) / n;
-      hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', '((n-2)×180)/n', 'sp-h-a-' + i));
+      const w = 4 + (i % 6), h = 3 + (i % 5), s = 2 + (i % 3);
+      medium.push(makeNumQ('Rechteck ' + w + '×' + h + ', Skalierung ×' + s + '. Neue Fläche?', w*s*h*s, 'medium', '×s²', 'sp-m-a-' + i));
     } else if (t === 1) {
-      const a = 3 + (i % 6), b = 4 + (i % 5), c = 2 + (i % 4);
-      hard.push(makeNumQ('Quader ' + a + '×' + b + '×' + c + '. Oberfläche?', 2 * (a*b + b*c + a*c), 'hard', '2(ab+bc+ac)', 'sp-h-v-' + i));
+      const a = 5 + (i % 8);
+      medium.push(makeNumQ('Würfel Kante ' + a + '. Oberfläche?', 6*a*a, 'medium', '6a²', 'sp-m-s-' + i));
+    } else if (t === 2) {
+      medium.push(makeTextQ('Würfelnetz: Anzahl Quadrate?', '6', ['5','8'], 'medium', '6 Flächen', 'sp-m-n-' + i));
+    } else {
+      const a = 4 + (i % 7), b = 5 + (i % 6);
+      medium.push(makeNumQ('Quader ' + a + '×' + b + '×3. Volumen?', a*b*3, 'medium', 'abc', 'sp-m-v-' + i));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      const n = 6 + (i % 5);
+      hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ((n-2)*180)/n, 'hard', 'Formel', 'sp-h-a-' + i));
+    } else if (t === 1) {
+      const a = 4 + (i % 5), b = 5 + (i % 4), c = 3 + (i % 4);
+      hard.push(makeNumQ('Quader ' + a + '×' + b + '×' + c + '. Oberfläche?', 2*(a*b+b*c+a*c), 'hard', '2(ab+bc+ac)', 'sp-h-s-' + i));
     } else if (t === 2) {
       const opts = [
-        ['Spiegelung an Vertikale: Punkt links oben →?', 'rechts oben', ['links unten','rechts unten']],
-        ['90° Drehung Uhrzeigersinn: oben →?', 'rechts', ['links','unten']],
-        ['180° Drehung: links unten →?', 'rechts oben', ['links oben','rechts unten']]
-      ];
-      const o = opts[i % opts.length];
-      hard.push(makeTextQ(o[0], o[1], o[2], 'hard', 'Transformation', 'sp-h-m-' + i));
+        ['Spiegelung Vertikale: links oben →?', 'rechts oben', ['links unten','rechts unten']],
+        ['90° Uhrzeigersinn: oben →?', 'rechts', ['links','unten']],
+        ['180°: links unten →?', 'rechts oben', ['links oben','rechts unten']]
+      ][i % 3];
+      hard.push(makeTextQ(opts[0], opts[1], opts[2], 'hard', 'Transformation', 'sp-h-m-' + i));
     } else {
-      const a = 5 + (i % 5), b = 12 + (i % 4);
-      hard.push(makeNumQ('Rechtwinkliges Dreieck Katheten ' + a + ',' + b + '. Hypotenuse?', Math.sqrt(a*a + b*b), 'hard', 'Pythagoras', 'sp-h-py-' + i));
+      const triples = [[5,12,13],[6,8,10],[7,24,25],[9,12,15],[8,15,17],[20,21,29]];
+      const tr = triples[i % triples.length];
+      hard.push(makeNumQ('Rechtwinklig: Katheten ' + tr[0] + ',' + tr[1] + '. Hypotenuse?', tr[2], 'hard', 'Pythagoras', 'sp-h-py-' + i));
     }
   }
   return assemble300(easy, medium, hard);
@@ -1887,102 +1881,88 @@ function generateSpatialFragen() {
 // ---------- NETWORKED ----------
 function generateNetworkedFragen() {
   const easyPairs = [
-    ['Mehr Regen → eher…', 'Hochwasser-Risiko steigt', ['sofort Dürre','kein Bezug']],
-    ['Impfung hilft…', 'Erkrankungen vorzubeugen', ['Knochen sofort heilen','nur Haare']],
-    ['Wenig Schlaf → Konzentration…', 'sinkt oft', ['steigt immer','bleibt garantiert gleich']],
-    ['Schlechte Kommunikation →', 'Missverständnisse', ['automatisch Perfektion','kein Effekt']],
-    ['Bewegung + Ernährung beeinflussen…', 'Gesundheit', ['nur Schuhgröße','nur Namen']],
-    ['Stress kann…', 'Schlaf stören', ['Knochen verlängern','nur Freude']],
-    ['Frühe Prävention oft…', 'wirksamer als spätes Reagieren', ['immer nutzlos','immer ohne Nutzen']],
+    ['Mehr Dauerregen → eher…', 'steigendes Hochwasser-Risiko', ['sofortige Dürre','kein Bezug']],
+    ['Impfung hilft vor allem…', 'Erkrankungen vorzubeugen', ['Knochen sofort heilen','Haare färben']],
+    ['Chronischer Schlafmangel → Konzentration…', 'sinkt oft', ['steigt garantiert','bleibt immer gleich']],
+    ['Unklare Übergabe → eher…', 'Missverständnisse/Fehler', ['automatisch Perfektion','kein Effekt']],
+    ['Bewegung + Ernährung beeinflussen…', 'Gesundheit langfristig', ['nur Schuhgröße','nur Nachnamen']],
+    ['Hoher Dauerstress kann…', 'Schlaf und Erholung stören', ['Knochen verlängern','nur Freude steigern']],
+    ['Frühe Prävention ist oft…', 'wirksamer als spätes Reagieren', ['immer nutzlos','ohne jeden Nutzen']],
     ['Medikamente prüfen wegen…', 'Wechselwirkungen', ['Mode','Zufall']],
     ['Dokumentationslücken führen oft zu…', 'Informationsverlust', ['mehr Klarheit','automatisch Qualität']],
-    ['Überlastung + Zeitdruck erhöhen…', 'Fehlerrisiko', ['Perfektion','Null Fehler']]
+    ['Überlastung + Zeitdruck erhöhen…', 'Fehlerrisiko', ['garantierte Perfektion','Null Fehler']]
   ];
   const medPairs = [
-    ['A→B→C: Steuerung von A beeinflusst…', 'C indirekt (Kette)', ['nie C','nur Zufall']],
-    ['Engpass limitiert…', 'Gesamtdurchsatz', ['nur Schritt 9','nichts']],
-    ['Isolation korreliert oft mit…', 'schlechterem Wohlbefinden', ['garantiert Reichtum','Immun-Garantie']],
-    ['Trade-off bedeutet…', 'Abwägung von Vor-/Nachteilen', ['nur Win-win','kein Konflikt möglich']],
-    ['Latenz: Wirkung kommt…', 'verzögert', ['immer sofort','nie']],
-    ['Resilienz ist…', 'Widerstands-/Erholungsfähigkeit', ['Chaosliebe','reine Starrheit']],
-    ['Feedback Erfolg→Übung→…', 'höhere Erfolgschance', ['garantiert Abbruch','kein Bezug']],
-    ['Mehr Personal allein ohne Prozess…', 'löst Engpässe nicht immer', ['löst alles garantiert','ist nutzlos immer']],
+    ['A→B→C: Eingriff bei A beeinflusst…', 'C oft indirekt', ['nie C','nur Zufall']],
+    ['Engpass limitiert…', 'Gesamtdurchsatz', ['nur den letzten Schritt','nichts']],
+    ['Trade-off bedeutet…', 'Abwägung von Vor-/Nachteilen', ['nur Win-win','kein Konflikt']],
+    ['Latenz heißt: Wirkung kommt…', 'verzögert', ['immer sofort','nie']],
+    ['Resilienz ist…', 'Widerstands- und Erholungsfähigkeit', ['Chaosliebe','reine Starrheit']],
+    ['Mehr Personal ohne Prozessklärung…', 'löst Engpässe nicht immer', ['löst alles garantiert','ist immer nutzlos']],
     ['Prävention + Früherkennung wirken…', 'komplementär', ['immer gegeneinander','nur Zufall']],
-    ['Systemdenken fragt vor allem…', 'Wechselwirkungen', ['nur Einzelteile isoliert','nur Farben']],
-    ['Wenn Schichtplan knapper wird und Krankenstand steigt, steigt eher…', 'Belastung der Verbliebenen', ['automatisch Freizeit','Null Risiko']],
-    ['Qualitätskontrolle spart oft später…', 'Nacharbeit/Kosten', ['garantiert mehr Fehler','nur Dekoration']]
+    ['Systemdenken fragt vor allem nach…', 'Wechselwirkungen', ['nur isolierten Teilen','nur Farben']],
+    ['Knappere Schicht + höherer Krankenstand → eher…', 'höhere Belastung der Verbliebenen', ['mehr Freizeit','Null Risiko']],
+    ['Qualitätskontrolle spart oft später…', 'Nacharbeit/Kosten', ['garantiert mehr Fehler','nur Dekoration']],
+    ['Feedback Erfolg→Übung→…', 'höhere Erfolgschance', ['garantierten Abbruch','kein Bezug']],
+    ['Isolation korreliert oft mit…', 'schlechterem Wohlbefinden', ['garantiertem Reichtum','Immun-Garantie']]
   ];
   const hardPairs = [
-    ['Positives Feedback (Verstärkung) ohne Bremse führt oft zu…', 'Eskalation/Instabilität', ['garantierter Ruhezustand','immer Gleichgewicht']],
-    ['Zwei Engpässe hintereinander: Gesamtdurchsatz ≈', 'Minimum der beiden Kapazitäten', ['Summe der Kapazitäten','Maximum der beiden']],
-    ['Maßnahme hilft A, schadet B: typisch?', 'Trade-off / Zielkonflikt', ['immer Pareto-optimal','kein Konflikt']],
-    ['Verzögerte Wirkung + zu starkes Gegensteuern → oft…', 'Überschwingen/Oszillation', ['sofortiges Optimum','kein Effekt']],
-    ['Fehlende Schnittstellenkommunikation trotz guter Einzelteams →', 'Systemversagen an der Nahtstelle', ['automatisch Exzellenz','nur Zufall']],
-    ['Ressource wird von 3 Prozessen geteilt: kritischer Blick auf…', 'Priorisierung & Warteschlangen', ['nur Farben der Räume','nur Namen']],
-    ['Frühwarnindikator nützt, wenn…', 'Handlungsspielraum noch besteht', ['erst nach Totalschaden','nie']],
+    ['Positives Feedback ohne Bremse führt oft zu…', 'Eskalation/Instabilität', ['garantiertem Ruhezustand','immer Gleichgewicht']],
+    ['Zwei Engpässe hintereinander: Durchsatz ≈', 'Minimum der Kapazitäten', ['Summe','Maximum']],
+    ['Hilfe für A schadet B: typisch?', 'Trade-off / Zielkonflikt', ['immer Pareto-optimal','kein Konflikt']],
+    ['Verzögerte Wirkung + starkes Gegensteuern → oft…', 'Überschwingen/Oszillation', ['sofortiges Optimum','kein Effekt']],
+    ['Gute Teams, schlechte Schnittstellen →', 'Systemversagen an der Nahtstelle', ['automatische Exzellenz','nur Zufall']],
+    ['Ressource von 3 Prozessen geteilt: kritisch sind…', 'Priorisierung & Warteschlangen', ['Raumfarben','Namen']],
+    ['Frühwarnindikator nützt, wenn…', 'noch Handlungsspielraum besteht', ['erst nach Totalschaden','nie']],
     ['Lokale Optimierung kann global…', 'verschlechtern', ['immer verbessern','nie wirken']],
-    ['Redundanz kostet, erhöht aber oft…', 'Ausfallsicherheit', ['nur Chaos','nur Kosten ohne Nutzen immer']],
-    ['Ursache weit weg von Symptom (zeitlich/räumlich) →', 'schwer zu erkennen ohne Systemblick', ['immer offensichtlich','kein Zusammenhang möglich']],
+    ['Redundanz kostet, erhöht oft…', 'Ausfallsicherheit', ['nur Chaos','nie Nutzen']],
+    ['Ursache weit vom Symptom →', 'schwer erkennbar ohne Systemblick', ['immer offensichtlich','kein Zusammenhang']],
     ['Mehrere schwache Signale zusammen…', 'können kritischen Trend zeigen', ['sind immer Rauschen','nie relevant']],
-    ['Policy mit unbeabsichtigten Nebenwirkungen: prüfen…', 'Second-Order-Effekte', ['nur Absichtserklärung','nur Logo']]
+    ['Policy mit Nebenwirkungen: prüfen…', 'Second-Order-Effekte', ['nur Absichtserklärung','nur Logo']]
   ];
-
   const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
     const p = easyPairs[i % easyPairs.length];
-    const stem = (i % 3 === 0) ? p[0] : ((i % 3 === 1) ? ('Ursache–Wirkung: ' + p[0]) : ('Was folgt eher? ' + p[0]));
-    easy.push(makeTextQ(stem, p[1], p[2], 'easy', p[1], 'net-e-' + i));
+    easy.push(makeTextQ((i%2?'Ursache–Wirkung: ':'') + p[0], p[1], p[2], 'easy', p[1], 'net-e-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const p = medPairs[i % medPairs.length];
-    medium.push(makeTextQ((i % 2 ? 'Vernetzt: ' : 'Systemblick: ') + p[0], p[1], p[2], 'medium', p[1], 'net-m-' + i));
+    medium.push(makeTextQ('Systemblick: ' + p[0], p[1], ['zu absolut: ' + p[2][0], p[2][1]], 'medium', p[1], 'net-m-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const p = hardPairs[i % hardPairs.length];
-    hard.push(makeTextQ((i % 2 ? 'Mehrstufig/komplex: ' : 'Trade-off & Dynamik: ') + p[0], p[1], ['nahe, aber zu absolut: ' + p[2][0], p[2][1]], 'hard', p[1], 'net-h-' + i));
+    hard.push(makeTextQ('Komplex/Dynamik: ' + p[0], p[1], ['nahe, aber falsch: ' + p[2][0], p[2][1]], 'hard', p[1], 'net-h-' + i));
   }
   return assemble300(easy, medium, hard);
 }
 
 // ---------- FIGURAL ----------
 function generateFiguralFragen() {
-  const shapes = [
-    ['Dreieck', 3],['Quadrat', 4],['Pentagon', 5],['Hexagon', 6],['Heptagon', 7],['Oktagon', 8],['Nonagon', 9],['Dekagon', 10]
-  ];
+  const shapes = [['Dreieck',3],['Quadrat',4],['Pentagon',5],['Hexagon',6],['Heptagon',7],['Oktagon',8],['Nonagon',9],['Dekagon',10]];
   const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
     const s = shapes[i % shapes.length];
-    if (t === 0) easy.push(makeNumQ('Wie viele Seiten hat ein ' + s[0] + '?', s[1], 'easy', s[0], 'fig-e-1-' + i));
-    else if (t === 1) easy.push(makeTextQ('Welche Form hat ' + s[1] + ' Ecken?', s[0], [shapes[(i + 1) % shapes.length][0], shapes[(i + 2) % shapes.length][0]], 'easy', s[0], 'fig-e-2-' + i));
-    else if (t === 2) easy.push(makeTextQ('Analogie: Dreieck:3 = Viereck:?', '4', ['5','6'], 'easy', 'Seiten', 'fig-e-3-' + i));
-    else easy.push(makeTextQ('Nächstes: Kreis, Kreis, Dreieck, Kreis, Kreis, ? (Muster 2+1)', 'Dreieck', ['Kreis','Quadrat'], 'easy', '2 Kreise dann Dreieck', 'fig-e-4-' + i));
+    if (t === 0) easy.push(makeNumQ('Seiten eines ' + s[0] + '?', s[1], 'easy', s[0], 'fig-e-1-' + i));
+    else if (t === 1) easy.push(makeTextQ('Form mit ' + s[1] + ' Ecken?', s[0], [shapes[(i+1)%shapes.length][0], shapes[(i+3)%shapes.length][0]], 'easy', s[0], 'fig-e-2-' + i));
+    else if (t === 2) easy.push(makeTextQ('Analogie: Dreieck:3 = Hexagon:?', '6', ['5','8'], 'easy', 'Seiten', 'fig-e-3-' + i));
+    else easy.push(makeTextQ('Muster: □□△ □□△ □□ ?', '△', ['□','○'], 'easy', '2+1', 'fig-e-4-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
-    const s = shapes[i % shapes.length];
-    if (t === 0) medium.push(makeTextQ('Analogie: Dreieck:3 = ' + s[0] + ':?', String(s[1]), [String(s[1] + 1), String(s[1] - 1)], 'medium', 'Seitenzahl', 'fig-m-1-' + i));
-    else if (t === 1) medium.push(makeNumQ('Diagonale im konvexen ' + s[1] + '-Eck (n(n-3)/2)?', s[1] * (s[1] - 3) / 2, 'medium', 'n(n-3)/2', 'fig-m-2-' + i));
-    else if (t === 2) medium.push(makeTextQ('Reihe: Dreieck, Viereck, Fünfeck, ?', 'Sechseck', ['Kreis','Linie'], 'medium', '+1 Ecke', 'fig-m-3-' + i));
-    else {
-      const n = 4 + (i % 5);
-      medium.push(makeNumQ('Regelmäßiges ' + n + '-Eck: Anzahl Symmetrieachsen?', n, 'medium', 'n Achsen', 'fig-m-4-' + i));
-    }
+    const s = shapes[(i+2) % shapes.length];
+    if (t === 0) medium.push(makeTextQ('Analogie: Dreieck:3 = ' + s[0] + ':?', String(s[1]), [String(s[1]+1), String(s[1]-1)], 'medium', 'Seiten', 'fig-m-1-' + i));
+    else if (t === 1) medium.push(makeNumQ('Diagonalen konvexes ' + s[1] + '-Eck?', s[1]*(s[1]-3)/2, 'medium', 'n(n-3)/2', 'fig-m-2-' + i));
+    else if (t === 2) medium.push(makeTextQ('Reihe: 3-Eck, 4-Eck, 5-Eck, ?', '6-Eck', ['Kreis','Linie'], 'medium', '+1 Ecke', 'fig-m-3-' + i));
+    else medium.push(makeNumQ('Symmetrieachsen regelmäßiges ' + s[1] + '-Eck?', s[1], 'medium', 'n Achsen', 'fig-m-4-' + i));
   }
   for (let i = 0; i < 100; i++) {
     const t = i % 4;
-    const n = 5 + (i % 6);
-    if (t === 0) {
-      const ang = ((n - 2) * 180) / n;
-      hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', 'Formel', 'fig-h-1-' + i));
-    } else if (t === 1) {
-      hard.push(makeNumQ('Summe Innenwinkel ' + n + '-Eck?', (n - 2) * 180, 'hard', '(n-2)×180', 'fig-h-2-' + i));
-    } else if (t === 2) {
-      hard.push(makeTextQ('Symmetrie: regelmäßiges ' + n + '-Eck — Drehsymmetrie Ordnung?', String(n), [String(n - 1), String(n + 1)], 'hard', 'n-fach', 'fig-h-3-' + i));
-    } else {
-      // exterior angle
-      hard.push(makeNumQ('Außenwinkel regelmäßiges ' + n + '-Eck?', 360 / n, 'hard', '360/n', 'fig-h-4-' + i));
-    }
+    const n = 6 + (i % 5);
+    if (t === 0) hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ((n-2)*180)/n, 'hard', 'Formel', 'fig-h-1-' + i));
+    else if (t === 1) hard.push(makeNumQ('Innenwinkelsumme ' + n + '-Eck?', (n-2)*180, 'hard', '(n-2)×180', 'fig-h-2-' + i));
+    else if (t === 2) hard.push(makeTextQ('Drehsymmetrie-Ordnung regelmäßiges ' + n + '-Eck?', String(n), [String(n-1), String(n+1)], 'hard', 'n-fach', 'fig-h-3-' + i));
+    else hard.push(makeNumQ('Außenwinkel regelmäßiges ' + n + '-Eck?', 360/n, 'hard', '360/n', 'fig-h-4-' + i));
   }
   return assemble300(easy, medium, hard);
 }
@@ -2061,7 +2041,7 @@ const state = {
   usedIds: new Set(),
   recentIds: loadJSON('mc_recent_ids', []),
   mistakes: loadJSON('mc_mistakes', []),
-  version: 'v14-parent-reports',
+  version: 'v14-overall-harder',
   fbReady: false,
   fbUid: localStorage.getItem('mc_fb_uid') || null,
   fbSyncStatus: 'off'
