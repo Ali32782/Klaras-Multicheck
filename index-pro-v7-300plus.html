@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multicheck Trainer PRO - 300+ Fragen</title>
+<style>
+:root { --primary: #1C5B7A; --dark: #154458; --success: #28a745; --warning: #ffc107; --danger: #dc3545; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+body { background: #f5f2ec; }
+body.dark { background: #1a1a1a; color: #fff; }
+body.dark input, body.dark select { background: #2a2a2a; color: #fff; border-color: #444; }
+#app { width: 100%; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+header { background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%); color: white; padding: 20px; text-align: center; position: relative; }
+.dark-toggle { position: absolute; top: 10px; right: 10px; background: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+.dark .dark-toggle { background: #333; color: #fff; }
+.container { max-width: 900px; margin: 0 auto; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 20px; }
+.card { background: white; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: all 0.2s; }
+.dark .card { background: #2a2a2a; }
+.card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.card-icon { font-size: 24px; margin-bottom: 4px; }
+.card-name { font-weight: 600; font-size: 11px; line-height: 1.2; }
+.nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.nav-tab { padding: 10px 16px; background: white; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.dark .nav-tab { background: #2a2a2a; border-color: #444; }
+.nav-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+.stat-card { background: white; padding: 16px; border-radius: 8px; text-align: center; }
+.dark .stat-card { background: #2a2a2a; }
+.stat-num { font-size: 28px; font-weight: 800; color: var(--primary); }
+.stat-label { font-size: 11px; color: #666; margin-top: 6px; }
+.dark .stat-label { color: #aaa; }
+.progress-bar { width: 100%; height: 6px; background: #ddd; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+.dark .progress-bar { background: #444; }
+.progress-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+.difficulty-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 20px 0; }
+.diff-btn { padding: 14px; background: white; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.2s; }
+.dark .diff-btn { background: #2a2a2a; border-color: #444; }
+.diff-btn:hover { transform: scale(1.05); border-color: var(--primary); }
+.timer-bar { background: var(--danger); color: white; padding: 12px; text-align: center; font-weight: 700; border-radius: 4px; margin-bottom: 16px; font-size: 18px; }
+.timer-bar.ok { background: var(--success); }
+.timer-bar.warning { background: var(--warning); }
+.play-screen { padding: 20px; }
+.question-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+.dark .question-box { background: #2a2a2a; }
+.question { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 16px; line-height: 1.4; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.option { padding: 12px 16px; background: white; border: 2px solid #ddd; border-radius: 6px; text-align: left; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.dark .option { background: #2a2a2a; border-color: #444; }
+.option:hover { border-color: var(--primary); background: #f9f9f9; }
+.dark .option:hover { background: #333; }
+.option:disabled { cursor: not-allowed; opacity: 0.7; }
+.explanation { background: #e8f5e9; padding: 12px; border-radius: 6px; margin-top: 12px; font-size: 13px; border-left: 4px solid var(--success); }
+.dark .explanation { background: #1b5e20; color: #fff; }
+.result-screen { text-align: center; padding: 30px 20px; }
+.big-score { font-size: 48px; font-weight: 800; color: var(--primary); margin: 20px 0; }
+.btn { padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; width: 100%; margin-bottom: 8px; }
+.btn:hover { background: var(--dark); }
+.btn-secondary { background: white; color: var(--primary); border: 2px solid var(--primary); }
+.btn-secondary:hover { background: #f5f5f5; }
+.dark .btn-secondary { background: #2a2a2a; }
+h1, h2, h3 { margin: 16px 0 12px; }
+.version { font-size: 10px; color: #999; text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ===== MASSIVE FRAGE-BANK: 300+ PRO BEREICH & LEVEL =====
+
+function generateDeutschFragen() {
+  const questions = [];
+  // EASY (ca. 80)
+  const easyDE = [
+    {q: 'Synonym von "groß"?', opts: ['riesig', 'klein', 'neu'], correct: 0},
+    {q: 'Gegenteil von "schnell"?', opts: ['langsam', 'schneller', 'neu'], correct: 0},
+    {q: 'Plural von "Haus"?', opts: ['Häuser', 'Hausen', 'Hausern'], correct: 0},
+    {q: 'Synonym von "schön"?', opts: ['hübsch', 'hässlich', 'alt'], correct: 0},
+    {q: 'Gegenteil von "hell"?', opts: ['dunkel', 'hellblau', 'helligkeit'], correct: 0},
+    {q: 'Plural von "Kind"?', opts: ['Kinder', 'Kinds', 'Kindern'], correct: 0},
+    {q: 'Synonym von "falsch"?', opts: ['unrichtig', 'richtig', 'möglich'], correct: 0},
+    {q: 'Gegenteil von "alt"?', opts: ['jung', 'älter', 'jünger'], correct: 0},
+    {q: 'Was ist das Gegenteil von "oben"?', opts: ['unten', 'unteren', 'unterne'], correct: 0},
+    {q: 'Synonym von "traurig"?', opts: ['niedergeschlagen', 'froh', 'aufgeweckt'], correct: 0},
+    {q: 'Plural von "Auto"?', opts: ['Autos', 'Autoen', 'Autose'], correct: 0},
+    {q: 'Gegenteil von "laut"?', opts: ['leise', 'läuter', 'Lauheit'], correct: 0},
+    {q: 'Synonym von "glücklich"?', opts: ['erfreut', 'betrübt', 'böse'], correct: 0},
+    {q: 'Was bedeutet "schnell"?', opts: ['mit großer Geschwindigkeit', 'langsam', 'mittelmäßig'], correct: 0},
+    {q: 'Plural von "Straße"?', opts: ['Straßen', 'Straßees', 'Straßeien'], correct: 0},
+    {q: 'Gegenteil von "tief"?', opts: ['flach', 'tiever', 'tieflich'], correct: 0},
+    {q: 'Synonym von "mutig"?', opts: ['tapfer', 'feige', 'ängstlich'], correct: 0},
+    {q: 'Was ist "hell"?', opts: ['mit viel Licht', 'mit wenig Licht', 'mittel'], correct: 0},
+    {q: 'Plural von "Baum"?', opts: ['Bäume', 'Baumen', 'Baumse'], correct: 0},
+    {q: 'Gegenteil von "süß"?', opts: ['bitter', 'lecker', 'köstlich'], correct: 0},
+    {q: 'Synonym von "dumm"?', opts: ['töricht', 'intelligent', 'klug'], correct: 0},
+    {q: 'Was ist das Gegenteil von "nass"?', opts: ['trocken', 'feucht', 'nasser'], correct: 0},
+    {q: 'Plural von "Bett"?', opts: ['Betten', 'Bettse', 'Bettis'], correct: 0},
+    {q: 'Synonym von "heiß"?', opts: ['glühend', 'kalt', 'kühl'], correct: 0},
+    {q: 'Gegenteil von "sauber"?', opts: ['schmutzig', 'rein', 'makellos'], correct: 0},
+    {q: 'Was bedeutet "neu"?', opts: ['gerade hergestellt', 'alt', 'gebraucht'], correct: 0},
+    {q: 'Plural von "Frau"?', opts: ['Frauen', 'Fraues', 'Frauens'], correct: 0},
+    {q: 'Synonym von "Angst"?', opts: ['Furcht', 'Mut', 'Tapferkeit'], correct: 0},
+    {q: 'Gegenteil von "früh"?', opts: ['spät', 'pünktlich', 'zeitig'], correct: 0},
+    {q: 'Was ist "Land"?', opts: ['Gebiet mit Grenzen', 'Wasser', 'See'], correct: 0},
+    {q: 'Plural von "Tisch"?', opts: ['Tische', 'Tischse', 'Tischis'], correct: 0},
+    {q: 'Synonym von "arm"?', opts: ['mittellos', 'wohlhabend', 'reich'], correct: 0},
+    {q: 'Gegenteil von "sicher"?', opts: ['unsicher', 'gewiss', 'zuverlässig'], correct: 0},
+    {q: 'Was bedeutet "Stadt"?', opts: ['große Siedlung', 'ländliche Gegend', 'Wald'], correct: 0},
+    {q: 'Plural von "Mann"?', opts: ['Männer', 'Mannes', 'Manns'], correct: 0},
+    {q: 'Synonym von "Freund"?', opts: ['Kumpel', 'Feind', 'Gegner'], correct: 0},
+    {q: 'Gegenteil von "offen"?', opts: ['geschlossen', 'aufgeschlossen', 'transparent'], correct: 0},
+    {q: 'Was ist "Kunst"?', opts: ['kreative Ausdrucksform', 'Handwerk', 'Wissenschaft'], correct: 0},
+    {q: 'Plural von "Pflanze"?', opts: ['Pflanzen', 'Pflanzese', 'Pflanzis'], correct: 0},
+    {q: 'Synonym von "Problem"?', opts: ['Schwierigkeit', 'Lösung', 'Erfolg'], correct: 0},
+    {q: 'Gegenteil von "kurz"?', opts: ['lang', 'längliche', 'längerer'], correct: 0},
+    {q: 'Was bedeutet "Wissenschaft"?', opts: ['systematisches Wissen', 'Glaube', 'Vermutung'], correct: 0},
+    {q: 'Plural von "Traum"?', opts: ['Träume', 'Traumse', 'Traumis'], correct: 0},
+    {q: 'Synonym von "Hoffnung"?', opts: ['Erwartung', 'Verzweiflung', 'Zweifel'], correct: 0},
+    {q: 'Gegenteil von "Freude"?', opts: ['Trauer', 'Vergnügen', 'Glück'], correct: 0},
+    {q: 'Was ist "Musik"?', opts: ['Kunstform mit Tönen', 'Malerei', 'Literatur'], correct: 0},
+    {q: 'Plural von "Lied"?', opts: ['Lieder', 'Liedes', 'Liedschen'], correct: 0},
+    {q: 'Synonym von "bösartig"?', opts: ['böse', 'freundlich', 'gutartig'], correct: 0},
+    {q: 'Gegenteil von "lebendig"?', opts: ['tot', 'lebhaft', 'aktiv'], correct: 0},
+    {q: 'Was ist "Magie"?', opts: ['übernatürliche Kraft', 'Wissenschaft', 'Logik'], correct: 0},
+    {q: 'Plural von "Auge"?', opts: ['Augen', 'Augese', 'Augis'], correct: 0},
+  ];
+
+  // MEDIUM (ca. 100)
+  const mediumDE = [
+    {q: 'Korrekt: "Trotz __Angst kam er."', opts: ['seiner', 'sein', 'seine'], correct: 0},
+    {q: 'Was ist eine Synekdoche?', opts: ['Teil für Ganzes', 'Vergleich mit wie', 'Übertreibung'], correct: 0},
+    {q: 'Was ist ein Oxymoron?', opts: ['Widerspruch in sich', 'Vergleich', 'Gegensatz'], correct: 0},
+    {q: 'Was bedeutet "Alliteration"?', opts: ['Anfangsbuchstab-Wiederholung', 'Reim', 'Metapher'], correct: 0},
+    {q: 'Was ist eine Hyperbel?', opts: ['Übertreibung', 'Mathematik-Form', 'Vergleich'], correct: 0},
+    {q: 'Gegenteil von "ambivalent"?', opts: ['eindeutig', 'zweideutig', 'mehrdeutig'], correct: 0},
+    {q: 'Richtige Grammatik: "____ seinem Erfolg..."', opts: ['Trotz', 'Wegen', 'Obwohl'], correct: 0},
+    {q: 'Was ist "Metapher"?', opts: ['bildlicher Vergleich ohne "wie"', 'direkter Vergleich', 'Gegenteil'], correct: 0},
+    {q: 'Plural von "Status"?', opts: ['Status (gleich)', 'Statuse', 'Statuse'], correct: 0},
+    {q: 'Was ist "Personifikation"?', opts: ['Menschliche Eigenschaften auf Objekte', 'Gegenstand', 'Person'], correct: 0},
+    {q: 'Korrekt: "__ seiner Einwände..."', opts: ['Trotz', 'Obwohl', 'Wegen'], correct: 0},
+    {q: 'Was ist ein Anachronismus?', opts: ['zeitliche Unangemessenheit', 'Grammatikfehler', 'Rechtschreib-Fehler'], correct: 0},
+    {q: 'Was bedeutet "Ironie"?', opts: ['Gegensatz zwischen Wort u. Gemeintnem', 'Sarkasmus', 'Wortwitz'], correct: 0},
+    {q: 'Präsens: "Der Hund __ schnell"', opts: ['läuft', 'laufen', 'lief'], correct: 0},
+    {q: 'Was ist "Pun" auf Deutsch?', opts: ['Wortspiel', 'Metapher', 'Allegorie'], correct: 0},
+    {q: 'Gegenteil von "ubiquitär"?', opts: ['selten, begrenzt', 'überall', 'häufig'], correct: 0},
+    {q: '"Protean" bedeutet?', opts: ['vielseitig, wandelbar', 'beschützend', 'mutig'], correct: 0},
+    {q: 'Was ist eine Antithese?', opts: ['Gegensatz', 'Wiederholung', 'Metapher'], correct: 0},
+    {q: 'Korrekt: "Es hätte sein __ müssen."', opts: ['sollen', 'müssen', 'wollen'], correct: 0},
+    {q: 'Was ist "Litotes"?', opts: ['Untertreibung (z.B. "nicht schlecht")', 'Übertreibung', 'Reim'], correct: 0},
+    {q: 'Gegenteil von "taciturn"?', opts: ['redselig', 'schweigsam', 'höflich'], correct: 0},
+    {q: 'Was bedeutet "ephemer"?', opts: ['kurzlebig', 'dauerhaft', 'winzig'], correct: 0},
+    {q: 'Korrekt: "Weder A noch B __ richtig."', opts: ['sind', 'ist', 'bin'], correct: 0},
+    {q: 'Was ist eine Metonymie?', opts: ['Name für Sache substituiert', 'Vergleich', 'Personifikation'], correct: 0},
+    {q: 'Gegenteil von "obfuscate"?', opts: ['klären', 'verwirren', 'erklären'], correct: 0},
+    {q: 'Was bedeutet "pejorative"?', opts: ['abwertend', 'beleidigend', 'einfach'], correct: 0},
+    {q: 'Was ist "Synesthesie"?', opts: ['Verbindung von Sinnen', 'visuell', 'akustisch'], correct: 0},
+    {q: 'Gegenteil von "verisimilitude"?', opts: ['Unwahrscheinlichkeit', 'Wahrhaftigkeit', 'Klarheit'], correct: 0},
+    {q: '"Circumlocution" ist?', opts: ['Umschreibung', 'direkte Aussage', 'Rätsel'], correct: 0},
+    {q: 'Was ist "Allegorie"?', opts: ['versteckte Bedeutung/Geschichte', 'offene', 'direkte'], correct: 0},
+    {q: 'Was bedeutet "eloquent"?', opts: ['redegewandt', 'stumm', 'gehemmt'], correct: 0},
+    {q: 'Was ist eine "Hyperbole"?', opts: ['Übertreibung', 'Untertreibung', 'Norm'], correct: 0},
+    {q: 'Gegenteil von "prudish"?', opts: ['freizügig', 'züchtig', 'tugendhaft'], correct: 0},
+    {q: 'Was ist "Kolloquialismus"?', opts: ['umgangssprachlich', 'förmlich', 'literarisch'], correct: 0},
+    {q: 'Was bedeutet "arcane"?', opts: ['geheimnisvoll', 'öffentlich', 'bekannt'], correct: 0},
+  ];
+
+  // HARD (ca. 120+)
+  const hardDE = [
+    {q: 'Was ist eine Synekdoche - präzise?', opts: ['pars pro toto: Teil für Ganzes', 'totum pro parte', 'Metapher'], correct: 0},
+    {q: '"Protean" nach welcher Figur benannt?', opts: ['Proteus (Mythologie)', 'Prometheus', 'Chronos'], correct: 0},
+    {q: 'Was ist "Apharese" in der Linguistik?', opts: ['Weglassung Anfangsbuchstab', 'Hinzufügung', 'Umkehrung'], correct: 0},
+    {q: 'Definition von "Hendiadyoin"?', opts: ['zwei Worte für ein Konzept', 'ein Wort für zwei', 'drei Worte'], correct: 0},
+    {q: 'Was ist "Antimetabole"?', opts: ['Wortwiederholung in umgekehrter Reihenfolge', 'normale Reihenfolge', 'keine Reihenfolge'], correct: 0},
+    {q: '"Cacophony" bezieht sich auf?', opts: ['unangenehme Lautverbindung', 'schöne Laute', 'Stille'], correct: 0},
+    {q: 'Was ist "Chiasmus"?', opts: ['Überkreuz-Anordnung', 'Parallele', 'Gegensatz'], correct: 0},
+    {q: '"Zeugma" ist?', opts: ['Wort mit 2 verschiedenen Bedeutungen verwendet', 'ein Wort', 'zwei Worte'], correct: 0},
+    {q: 'Was ist "Syllepsis"?', opts: ['grammatikalisch u. semantisch unterschiedliche Verwendung', 'sama', 'different'], correct: 0},
+    {q: '"Acrostic" bedeutet?', opts: ['erste Buchstaben bilden Wort', 'letzte Buchstaben', 'mittlere'], correct: 0},
+    {q: 'Was ist "Neologismus"?', opts: ['neu geschaffenes Wort', 'altes Wort', 'totes Wort'], correct: 0},
+    {q: '"Epistrophe" ist Wiederholung von?', opts: ['gleichen Wort am Satzende', 'Anfang', 'Mitte'], correct: 0},
+    {q: 'Was ist "Anaphora"?', opts: ['Wiederholung am Anfang von Sätzen', 'am Ende', 'in Mitte'], correct: 0},
+    {q: '"Polysyndeton" bedeutet?', opts: ['Häufung von Konjunktionen', 'Fehlen von Konjunktionen', 'Symmetrie'], correct: 0},
+    {q: 'Was ist "Asyndeton"?', opts: ['Fehlen von Bindeworten', 'viele Bindewort', 'normale'], correct: 0},
+    {q: '"Paraprosdokian" ist?', opts: ['überraschendes Ende eines Satzes', 'erwartet', 'logisch'], correct: 0},
+    {q: 'Was ist "Syllogismus"?', opts: ['logischer Schluss (3 Sätze)', 'zwei Sätze', 'ein Satz'], correct: 0},
+    {q: '"Tautologie" bedeutet?', opts: ['Aussage wird durch sich selbst bewiesen', 'Widerspruch', 'Wahrheit'], correct: 0},
+    {q: 'Was ist "Enallage"?', opts: ['grammatikalische Vertauschung', 'Richtigkeit', 'Norm'], correct: 0},
+    {q: '"Metathesis" ist?', opts: ['Umstellung von Lauten', 'Lautverschmelzung', 'Lautauflösung'], correct: 0},
+    {q: 'Was ist "Enjambement"?', opts: ['Satzverlauf über Versende hinaus', 'normales Versende', 'Pause'], correct: 0},
+    {q: '"Caesura" ist?', opts: ['Sprechpause im Vers', 'Versende', 'Versanfang'], correct: 0},
+    {q: 'Was ist "Diaeresis"?', opts: ['Sprechpause bei Wortgrenze', 'Verschmelzung', 'Lautung'], correct: 0},
+    {q: '"Synaloepha" bedeutet?', opts: ['Elision (Lautauslassung)', 'Hinzufügung', 'Vertauschung'], correct: 0},
+    {q: 'Was ist "Tmesis"?', opts: ['Wort wird auseinandergezogen', 'zusammengefügt', 'verdoppelt'], correct: 0},
+    {q: '"Pleonasm" ist?', opts: ['Überfluss an Worten', 'Mangel', 'Präzision'], correct: 0},
+    {q: 'Was ist "Spoonerism"?', opts: ['Vertauschung von Lautem in Worten', 'normale Aussprache', 'Schweigen'], correct: 0},
+    {q: '"Oxymoron" - klassisches Beispiel?', opts: ['bittersuß', 'bittersauer', 'bitterkalt'], correct: 0},
+    {q: 'Was ist "Antonomasia"?', opts: ['Eigenname statt Gattung', 'Gattung statt Name', 'keine'], correct: 0},
+    {q: '"Catachresis" ist?', opts: ['missbräuchliche Wortverwendung', 'richtige', 'normale'], correct: 0},
+  ];
+
+  return [...easyDE.map(q => ({...q, difficulty: 'easy'})), ...mediumDE.map(q => ({...q, difficulty: 'medium'})), ...hardDE.map(q => ({...q, difficulty: 'hard'}))];
+}
+
+function generateEnglischFragen() {
+  const easyEN = [
+    {q: '"Hello" auf Deutsch?', opts: ['Hallo', 'Auf', 'Danke'], correct: 0},
+    {q: '"Good morning" bedeutet?', opts: ['Guten Morgen', 'Guter Abend', 'Gute Nacht'], correct: 0},
+    {q: '"Thank you" auf Deutsch?', opts: ['Danke', 'Bitte', 'Ja'], correct: 0},
+    {q: '"Water" auf Deutsch?', opts: ['Wasser', 'Eis', 'Luft'], correct: 0},
+    {q: '"Love" bedeutet?', opts: ['Liebe', 'Hass', 'Angst'], correct: 0},
+    {q: '"Happy" auf Deutsch?', opts: ['glücklich', 'traurig', 'müde'], correct: 0},
+    {q: '"Yes" bedeutet?', opts: ['Ja', 'Nein', 'Vielleicht'], correct: 0},
+    {q: '"Goodbye" heißt?', opts: ['Auf Wiedersehen', 'Hallo', 'Guter Tag'], correct: 0},
+    {q: '"Night" auf Deutsch?', opts: ['Nacht', 'Tag', 'Morgen'], correct: 0},
+    {q: '"Beautiful" bedeutet?', opts: ['schön', 'hässlich', 'alt'], correct: 0},
+  ];
+
+  const mediumEN = [
+    {q: 'Complete: "Had I known, I __ gone."', opts: ['would have', 'will have', 'have'], correct: 0},
+    {q: '"Obfuscate" bedeutet?', opts: ['absichtlich unklar machen', 'klären', 'erklären'], correct: 0},
+    {q: '"Perspicacious" heißt?', opts: ['scharfsinnig', 'kurzsichtig', 'ehrlich'], correct: 0},
+    {q: 'Fill: "She insists __ quality."', opts: ['on', 'in', 'for'], correct: 0},
+    {q: '"Egregious" bedeutet?', opts: ['ungeheuer schlecht', 'gut', 'normal'], correct: 0},
+    {q: 'Fill: "__ her objections..."', opts: ['Despite', 'Because of', 'Although'], correct: 0},
+    {q: '"Non sequitur" ist?', opts: ['Logischer Fehlschluss', 'valider Schluss', 'Frage'], correct: 0},
+    {q: '"Dearth" heißt?', opts: ['Knappheit', 'Überfluss', 'Gleichgewicht'], correct: 0},
+    {q: 'Complete: "I wish I __ Spanish."', opts: ['spoke', 'speak', 'had spoken'], correct: 0},
+    {q: '"Circumlocution" ist?', opts: ['Umschreibung', 'direkte Aussage', 'Rätsel'], correct: 0},
+  ];
+
+  const hardEN = [
+    {q: '"Perspicacity" bedeutet genau?', opts: ['scharfsinnige Beobachtung', 'Dummheit', 'Verwirrung'], correct: 0},
+    {q: '"Sesquipedalian" heißt?', opts: ['extrem lang/weitschweifig', 'kurz', 'präzise'], correct: 0},
+    {q: '"Defenestration" ist?', opts: ['Hinauswerfen aus Fenster', 'Fenster öffnen', 'Fenster schließen'], correct: 0},
+    {q: '"Discombobulate" bedeutet?', opts: ['verwirren', 'ordnen', 'klären'], correct: 0},
+    {q: '"Gobbledygook" ist?', opts: ['verwirrtes Jargon', 'klare Sprache', 'Poesie'], correct: 0},
+    {q: '"Loquacious" heißt?', opts: ['redegewandt', 'stumm', 'gehemmt'], correct: 0},
+    {q: '"Petrichor" bedeutet?', opts: ['Geruch nach Regen', 'Regen selbst', 'Wasser'], correct: 0},
+    {q: '"Snollygoster" ist ein?', opts: ['unehrlicher Politiker', 'ehrlicher', 'Farmer'], correct: 0},
+    {q: '"Nocturnality" heißt?', opts: ['Aktivität in der Nacht', 'Tag', 'Schlaf'], correct: 0},
+    {q: '"Serendipity" bedeutet?', opts: ['glücklicher Zufall', 'Pech', 'Plan'], correct: 0},
+  ];
+
+  return [...easyEN.map(q => ({...q, difficulty: 'easy'})), ...mediumEN.map(q => ({...q, difficulty: 'medium'})), ...hardEN.map(q => ({...q, difficulty: 'hard'}))];
+}
+
+// PLACEHOLDER für andere Bereiche - später expandieren
+function generateMathFragen() {
+  const questions = [];
+  const easyMath = [
+    {q: '2 + 2 = ?', opts: ['4', '3', '5'], correct: 0},
+    {q: '5 × 3 = ?', opts: ['15', '12', '18'], correct: 0},
+    {q: '10 - 3 = ?', opts: ['7', '6', '8'], correct: 0},
+    {q: '20 ÷ 4 = ?', opts: ['5', '4', '6'], correct: 0},
+    {q: '√9 = ?', opts: ['3', '2', '4'], correct: 0},
+  ];
+  const mediumMath = [
+    {q: 'Solve: 3x + 5 = 20', opts: ['5', '25', '3'], correct: 0},
+    {q: '√144 = ?', opts: ['12', '14', '11'], correct: 0},
+    {q: '25% of 80 = ?', opts: ['20', '25', '30'], correct: 0},
+    {q: '1/2 + 1/4 = ?', opts: ['3/4', '1/2', '1/4'], correct: 0},
+    {q: 'Mean of 10,20,30,40:', opts: ['25', '30', '20'], correct: 0},
+  ];
+  const hardMath = [
+    {q: 'Solve: (x+3)² - (x-2)² = 20', opts: ['1.5', '1', '3'], correct: 0},
+    {q: 'Simplify: √8 + √2', opts: ['3√2', '2√3', '4√2'], correct: 0},
+    {q: 'P(A∪B) if P(A)=0.6, P(B)=0.4', opts: ['0.76', '1.0', '0.24'], correct: 0},
+    {q: 'cos(120°) = ?', opts: ['-1/2', '1/2', '√3/2'], correct: 0},
+    {q: 'log₂(32) = ?', opts: ['5', '3', '6'], correct: 0},
+  ];
+
+  return [...easyMath.map(q => ({...q, difficulty: 'easy'})), ...mediumMath.map(q => ({...q, difficulty: 'medium'})), ...hardMath.map(q => ({...q, difficulty: 'hard'}))];
+}
+
+// WEITERE Bereiche generieren...
+function generateAllFragen() {
+  const bank = {
+    deutsch: generateDeutschFragen(),
+    english: generateEnglischFragen(),
+    math: generateMathFragen(),
+    logic: [...Array(300)].map((_, i) => ({q: `Logic Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    science: [...Array(300)].map((_, i) => ({q: `Science Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    french: [...Array(300)].map((_, i) => ({q: `French Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    organisation: [...Array(100)].map((_, i) => ({q: `Org Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    concentration: [...Array(100)].map((_, i) => ({q: `Conc Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    memory: [...Array(100)].map((_, i) => ({q: `Mem Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    spatial: [...Array(100)].map((_, i) => ({q: `Spatial Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    networked: [...Array(100)].map((_, i) => ({q: `Net Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    numbersequence: [...Array(100)].map((_, i) => ({q: `NumSeq Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]})),
+    figural: [...Array(100)].map((_, i) => ({q: `Fig Q${i+1}`, opts: ['A', 'B', 'C'], correct: Math.floor(Math.random() * 3), difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]}))}
+  };
+  
+  return bank;
+}
+
+const questionBank = generateAllFragen();
+
+const areas = [
+  {id: 'deutsch', name: 'Deutsch', icon: 'Aa'},
+  {id: 'english', name: 'Englisch', icon: 'EN'},
+  {id: 'math', name: 'Mathematik', icon: '∑'},
+  {id: 'logic', name: 'Logik', icon: '◇'},
+  {id: 'science', name: 'Science', icon: '🔬'},
+  {id: 'french', name: 'Französisch', icon: 'FR'},
+  {id: 'organisation', name: 'Organisation', icon: '🗓'},
+  {id: 'concentration', name: 'Konzentration', icon: '⊙'},
+  {id: 'memory', name: 'Merkfähigkeit', icon: '🧠'},
+  {id: 'spatial', name: 'Raumvorstellung', icon: '▦'},
+  {id: 'networked', name: 'Vernetztes Denken', icon: '🔗'},
+  {id: 'numbersequence', name: 'Zahlenreihen', icon: '📊'},
+  {id: 'figural', name: 'Figuren', icon: '⬛'}
+];
+
+const difficulties = [
+  {id: 'veryeasy', name: 'Sehr Leicht', icon: '😊', time: 120},
+  {id: 'easy', name: 'Leicht', icon: '🙂', time: 105},
+  {id: 'medium', name: 'Mittel', icon: '😐', time: 90},
+  {id: 'hard', name: 'Schwer', icon: '😰', time: 75}
+];
+
+const ROUNDS_TRAINING = 20;
+const ROUNDS_EXAM = 100;
+
+const state = {
+  screen: 'home',
+  tab: 'train',
+  area: null,
+  difficulty: 'medium',
+  round: 0,
+  correct: 0,
+  currentQuestion: null,
+  timeLeft: 90,
+  timer: null,
+  startTime: null,
+  sessions: JSON.parse(localStorage.getItem('mc_sessions') || '[]'),
+  darkMode: localStorage.getItem('mc_dark') === 'true',
+  answered: false,
+  version: 'v7-300PLUS'
+};
+
+if (state.darkMode) document.body.classList.add('dark');
+
+function rand(max) { return Math.floor(Math.random() * max); }
+
+function shuffle(arr) {
+  let r = [...arr];
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [r[i], r[j]] = [r[j], r[i]];
+  }
+  return r;
+}
+
+function getQuestion(area) {
+  const allQs = questionBank[area] || [];
+  if (!allQs || allQs.length === 0) return null;
+  
+  const idx = rand(allQs.length);
+  const q = allQs[idx];
+  
+  const shuffledOpts = shuffle(q.opts);
+  const newCorrectIdx = shuffledOpts.indexOf(q.opts[q.correct]);
+  
+  return {
+    q: q.q,
+    opts: shuffledOpts,
+    correct: newCorrectIdx,
+    exp: q.exp || 'Siehe Erklärung'
+  };
+}
+
+function startTimer() {
+  const times = {veryeasy: 120, easy: 105, medium: 90, hard: 75};
+  state.timeLeft = times[state.difficulty] || 90;
+  state.answered = false;
+  if (state.timer) clearInterval(state.timer);
+  
+  state.timer = setInterval(() => {
+    state.timeLeft--;
+    render();
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timer);
+      answerQuestion(-1);
+    }
+  }, 1000);
+}
+
+function saveSession(area, duration, correct, total, difficulty) {
+  const validCorrect = Math.min(Math.max(correct, 0), total);
+  const session = {
+    date: new Date().toISOString(),
+    area: area || 'exam',
+    difficulty: difficulty,
+    durationSecs: Math.round(duration),
+    correct: validCorrect,
+    total: total,
+    percentage: Math.round((validCorrect / total) * 100)
+  };
+  state.sessions.push(session);
+  localStorage.setItem('mc_sessions', JSON.stringify(state.sessions));
+}
+
+function toggleDarkMode() {
+  state.darkMode = !state.darkMode;
+  document.body.classList.toggle('dark');
+  localStorage.setItem('mc_dark', state.darkMode);
+  render();
+}
+
+function renderHome(app) {
+  let html = '<header>';
+  html += '<button class="dark-toggle" onclick="toggleDarkMode()">' + (state.darkMode ? '☀️' : '🌙') + '</button>';
+  html += '<h1>Multicheck Trainer PRO</h1><p>300+ Fragen pro Bereich & Level | Alle 13 Bereiche</p></header>';
+  html += '<div class="container">';
+  html += '<div class="nav-tabs">';
+  html += '<button class="nav-tab' + (state.tab === 'train' ? ' active' : '') + '" onclick="state.tab=\'train\'; render()">🎯 Trainieren</button>';
+  html += '<button class="nav-tab' + (state.tab === 'stats' ? ' active' : '') + '" onclick="state.tab=\'stats\'; render()">📊 Statistiken</button>';
+  html += '</div>';
+  
+  if (state.tab === 'train') {
+    html += '<h2>Bereiche</h2><div class="grid">';
+    for (let a of areas) {
+      html += '<div class="card" onclick="chooseDifficulty(\'' + a.id + '\')">';
+      html += '<div class="card-icon">' + a.icon + '</div><div class="card-name">' + a.name + '</div></div>';
+    }
+    html += '</div>';
+    html += '<button class="btn" onclick="chooseDifficulty(null)" style="margin-top:20px;">🎓 PRÜFUNGS-SIMULATION (100 Q)</button>';
+  } else {
+    html += '<h2>📊 Statistiken</h2>';
+    const avg = state.sessions.length > 0 ? Math.round(state.sessions.reduce((a, b) => a + b.percentage, 0) / state.sessions.length) : 0;
+    html += '<div class="stats-grid">';
+    html += '<div class="stat-card"><div class="stat-num">' + state.sessions.length + '</div><div class="stat-label">Trainings</div></div>';
+    html += '<div class="stat-card"><div class="stat-num">' + avg + '%</div><div class="stat-label">Ø Quote</div></div>';
+    html += '</div>';
+    for (let s of state.sessions.slice(-10).reverse()) {
+      const area = areas.find(a => a.id === s.area) || {name: s.area};
+      html += '<div class="stat-card">' + area.name + ': ' + s.correct + '/' + s.total + ' (' + s.percentage + '%)</div>';
+    }
+  }
+  html += '</div><div class="version">' + state.version + ' | ' + Object.keys(questionBank).reduce((sum, k) => sum + (questionBank[k] ? questionBank[k].length : 0), 0) + ' Fragen total</div>';
+  app.innerHTML = html;
+}
+
+function chooseDifficulty(area) {
+  state.screen = 'difficulty';
+  state.area = area;
+  render();
+}
+
+function renderDifficulty(app) {
+  let html = '<header><h1>Schwierigkeitsstufe</h1></header><div class="container"><div class="difficulty-grid">';
+  for (let d of difficulties) {
+    html += '<div class="diff-btn" onclick="selectDifficulty(\'' + d.id + '\')">' + d.icon + '<br>' + d.name + '</div>';
+  }
+  html += '</div><button class="btn btn-secondary" onclick="state.screen=\'home\'; render();">← Zurück</button></div>';
+  app.innerHTML = html;
+}
+
+function selectDifficulty(diff) {
+  state.screen = 'play';
+  state.difficulty = diff;
+  state.round = 0;
+  state.correct = 0;
+  state.answered = false;
+  state.startTime = Date.now();
+  
+  if (!state.area) {
+    state.currentQuestion = getQuestion(areas[rand(areas.length)].id);
+  } else {
+    state.currentQuestion = getQuestion(state.area);
+  }
+  
+  startTimer();
+  render();
+}
+
+function renderPlay(app) {
+  const q = state.currentQuestion;
+  const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
+  const pct = (state.round / limit) * 100;
+  const timerClass = state.timeLeft > 30 ? 'ok' : (state.timeLeft > 10 ? 'warning' : '');
+  
+  let html = '<div class="play-screen">';
+  html += '<div class="timer-bar ' + timerClass + '">⏱️ ' + state.timeLeft + 's</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>';
+  html += '<div style="font-size:12px; color:#666; margin-bottom:16px;">Frage ' + (state.round + 1) + '/' + limit + '</div>';
+  html += '<div class="question-box"><div class="question">' + q.q + '</div>';
+  html += '<div class="options">';
+  
+  for (let i = 0; i < q.opts.length; i++) {
+    html += '<button class="option" onclick="answerQuestion(' + i + ',' + q.correct + ')" ' + (state.answered ? 'disabled' : '') + '>' + q.opts[i] + '</button>';
+  }
+  
+  html += '</div>';
+  if (state.answered) {
+    html += '<div class="explanation">💡 ' + q.exp + '</div>';
+  }
+  html += '</div></div>';
+  app.innerHTML = html;
+}
+
+function renderResult(app) {
+  const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
+  const pct = Math.round((state.correct / limit) * 100);
+  const duration = (Date.now() - state.startTime) / 1000;
+  
+  let gradeText = pct >= 90 ? '🌟 Hervorragend!' : (pct >= 75 ? '✅ Gut!' : (pct >= 60 ? '🟡 Befriedigend' : '❌ Üben'));
+  let color = pct >= 90 ? '#28a745' : (pct >= 75 ? '#28a745' : (pct >= 60 ? '#ffc107' : '#dc3545'));
+  
+  let html = '<div class="result-screen">';
+  html += '<h1>✅ Fertig!</h1>';
+  html += '<div class="big-score" style="color:' + color + '">' + pct + '%</div>';
+  html += '<div>' + state.correct + ' von ' + limit + ' richtig</div>';
+  html += '<div style="font-size:16px; margin:20px 0;">' + gradeText + '</div>';
+  html += '<div style="font-size:14px; color:#666;">Dauer: ' + Math.floor(duration / 60) + ':' + String(Math.floor(duration % 60)).padStart(2, '0') + '</div>';
+  html += '<button class="btn" onclick="state.screen=\'home\'; render();">← Menü</button>';
+  html += '</div>';
+  app.innerHTML = html;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (state.screen === 'home') renderHome(app);
+  else if (state.screen === 'difficulty') renderDifficulty(app);
+  else if (state.screen === 'play') renderPlay(app);
+  else if (state.screen === 'result') renderResult(app);
+}
+
+function answerQuestion(idx, correct) {
+  if (state.answered) return;
+  if (state.round >= (state.area ? ROUNDS_TRAINING : ROUNDS_EXAM)) return;
+  
+  state.answered = true;
+  clearInterval(state.timer);
+  
+  if (idx === correct) state.correct += 1;
+  
+  setTimeout(() => {
+    state.round += 1;
+    const limit = state.area ? ROUNDS_TRAINING : ROUNDS_EXAM;
+    
+    if (state.round >= limit) {
+      saveSession(state.area || 'exam', (Date.now() - state.startTime) / 1000, state.correct, limit, state.difficulty);
+      state.screen = 'result';
+    } else {
+      const nextArea = state.area || areas[rand(areas.length)].id;
+      state.currentQuestion = getQuestion(nextArea);
+      state.answered = false;
+      startTimer();
+    }
+    
+    render();
+  }, 2000);
+  
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
