@@ -69,7 +69,7 @@ h1, h2, h3 { margin: 16px 0 12px; }
 <div id="app"></div>
 
 <script>
-// ===== Multicheck Trainer v10: diverse Fragetypen + echte Schwierigkeit + Anti-Repeat + Fehler üben =====
+// ===== Multicheck Trainer v11: Englisch mit Grammatik-Mix (nicht nur Wortschatz) + Anti-Repeat + Fehler üben =====
 
 const TARGET_PER_AREA = 300;
 
@@ -453,6 +453,7 @@ function generateDeutschFragen() {
 }
 
 // ---------- ENGLISH ----------
+// Mix: vocab EN↔DE capped (~28%), rest grammar / syn-ant / cloze / error / reading / collocations
 function generateEnglischFragen() {
   const vocab = [
     ['hello','Hallo'],['goodbye','Auf Wiedersehen'],['thank you','Danke'],['please','Bitte'],['water','Wasser'],
@@ -461,131 +462,391 @@ function generateEnglischFragen() {
     ['big','groß'],['small','klein'],['fast','schnell'],['slow','langsam'],['hot','heiß'],['cold','kalt'],
     ['good','gut'],['bad','schlecht'],['doctor','Arzt'],['nurse','Pfleger/in'],['patient','Patient'],
     ['health','Gesundheit'],['hospital','Krankenhaus'],['help','Hilfe'],['need','brauchen'],['want','wollen'],
-    ['can','können'],['must','müssen'],['today','heute'],['tomorrow','morgen'],['yesterday','gestern'],
-    ['always','immer'],['never','nie'],['often','oft'],['because','weil'],['but','aber'],['and','und'],
-    ['with','mit'],['without','ohne'],['before','vor'],['after','nach'],['body','Körper'],['head','Kopf'],
-    ['hand','Hand'],['heart','Herz'],['blood','Blut'],['pain','Schmerz'],['fever','Fieber'],['medicine','Medizin'],
-    ['care','Pflege'],['clean','sauber'],['safe','sicher'],['danger','Gefahr'],['emergency','Notfall'],
-    ['appointment','Termin'],['learn','lernen'],['read','lesen'],['write','schreiben'],['speak','sprechen'],
-    ['listen','zuhören'],['understand','verstehen'],['important','wichtig'],['difficult','schwierig'],
-    ['easy','einfach'],['early','früh'],['late','spät'],['enough','genug'],['more','mehr'],['less','weniger'],
-    ['people','Menschen'],['child','Kind'],['woman','Frau'],['man','Mann'],['city','Stadt'],['country','Land'],
-    ['money','Geld'],['buy','kaufen'],['sell','verkaufen'],['open','öffnen'],['close','schließen'],
-    ['start','starten'],['stop','stoppen'],['come','kommen'],['go','gehen'],['bring','bringen'],['take','nehmen'],
-    ['give','geben'],['find','finden'],['know','wissen'],['think','denken'],['feel','fühlen'],['strong','stark'],
-    ['weak','schwach'],['healthy','gesund'],['sick','krank'],['tired','müde'],['hungry','hungrig'],
-    ['careful','vorsichtig'],['useful','nützlich'],['necessary','nötig'],['improve','verbessern'],
-    ['reduce','verringern'],['increase','erhöhen'],['measure','messen'],['report','berichten'],
-    ['schedule','Zeitplan'],['shift','Schicht'],['wound','Wunde'],['pulse','Puls'],['breath','Atem'],
-    ['obfuscate','absichtlich unklar machen'],['perspicacious','scharfsinnig'],['egregious','ungeheuer schlecht'],
-    ['dearth','Knappheit'],['serendipity','glücklicher Zufall'],['meticulous','äußerst sorgfältig']
+    ['today','heute'],['tomorrow','morgen'],['yesterday','gestern'],['always','immer'],['never','nie'],
+    ['often','oft'],['because','weil'],['but','aber'],['with','mit'],['without','ohne'],
+    ['before','vor'],['after','nach'],['body','Körper'],['head','Kopf'],['hand','Hand'],['heart','Herz'],
+    ['blood','Blut'],['pain','Schmerz'],['fever','Fieber'],['medicine','Medizin'],['care','Pflege'],
+    ['clean','sauber'],['safe','sicher'],['danger','Gefahr'],['emergency','Notfall'],['appointment','Termin'],
+    ['learn','lernen'],['read','lesen'],['write','schreiben'],['speak','sprechen'],['listen','zuhören'],
+    ['understand','verstehen'],['important','wichtig'],['difficult','schwierig'],['easy','einfach'],
+    ['early','früh'],['late','spät'],['enough','genug'],['people','Menschen'],['child','Kind'],
+    ['woman','Frau'],['man','Mann'],['city','Stadt'],['country','Land'],['money','Geld'],
+    ['buy','kaufen'],['sell','verkaufen'],['open','öffnen'],['close','schließen'],['come','kommen'],
+    ['go','gehen'],['bring','bringen'],['take','nehmen'],['give','geben'],['find','finden'],
+    ['know','wissen'],['think','denken'],['feel','fühlen'],['strong','stark'],['weak','schwach'],
+    ['healthy','gesund'],['sick','krank'],['tired','müde'],['hungry','hungrig'],['careful','vorsichtig'],
+    ['useful','nützlich'],['necessary','nötig'],['improve','verbessern'],['reduce','verringern'],
+    ['increase','erhöhen'],['measure','messen'],['report','berichten'],['schedule','Zeitplan'],
+    ['shift','Schicht'],['wound','Wunde'],['pulse','Puls'],['breath','Atem'],['symptom','Symptom'],
+    ['prevention','Vorbeugung'],['accurate','genau'],['urgent','dringend'],['reliable','zuverlässig'],
+    ['assess','einschätzen'],['hygiene','Hygiene'],['meticulous','äußerst sorgfältig'],['dearth','Knappheit']
   ];
+
   const syn = [
-    ['big','large','tiny'],['fast','quick','slow'],['happy','glad','sad'],['smart','clever','dull'],
-    ['help','assist','hinder'],['start','begin','end'],['end','finish','start'],['sick','ill','healthy'],
-    ['careful','cautious','reckless'],['important','essential','trivial'],['reduce','decrease','increase'],
-    ['improve','enhance','worsen'],['pain','ache','joy'],['clean','tidy','dirty'],['safe','secure','dangerous']
+    ['big','large','tiny','new'],['fast','quick','slow','soft'],['happy','glad','sad','tall'],
+    ['smart','clever','dull','wet'],['help','assist','hinder','paint'],['start','begin','end','color'],
+    ['finish','complete','start','loud'],['sick','ill','healthy','wooden'],['careful','cautious','reckless','blue'],
+    ['important','essential','trivial','round'],['reduce','decrease','increase','sing'],['improve','enhance','worsen','jump'],
+    ['pain','ache','joy','table'],['clean','tidy','dirty','metal'],['safe','secure','dangerous','yellow'],
+    ['angry','furious','calm','square'],['buy','purchase','sell','sleep'],['ask','inquire','answer','dance'],
+    ['show','demonstrate','hide','eat'],['choose','select','reject','swim'],['enough','sufficient','scarce','green'],
+    ['often','frequently','rarely','purple'],['try','attempt','quit','bake'],['need','require','refuse','fly'],
+    ['hard','difficult','easy','orange'],['quiet','silent','noisy','cotton'],['rich','wealthy','poor','salty'],
+    ['true','correct','false','sweet'],['allow','permit','forbid','knit'],['delay','postpone','advance','draw']
   ];
   const ant = [
-    ['hot','cold'],['up','down'],['early','late'],['open','closed'],['strong','weak'],['healthy','sick'],
-    ['more','less'],['always','never'],['before','after'],['with','without'],['easy','difficult'],
-    ['good','bad'],['new','old'],['full','empty'],['loud','quiet']
-  ];
-  const grammar = [
-    ['She __ to work every day.', 'goes', ['go','going']],
-    ['They __ already left.', 'have', ['has','having']],
-    ['If I __ time, I would help.', 'had', ['have','has']],
-    ['He is interested __ music.', 'in', ['on','at']],
-    ['Please look __ the patient.', 'after', ['for','to']],
-    ['The report was written __ her.', 'by', ['from','with']],
-    ['There __ many options.', 'are', ['is','be']],
-    ['I have been waiting __ an hour.', 'for', ['since','during']],
-    ['She suggested that he __ early.', 'arrive', ['arrives','arriving']],
-    ['Neither of them __ ready.', 'is', ['are','be']]
-  ];
-  const plur = [
-    ['child','children','childs'],['mouse','mice','mouses'],['foot','feet','foots'],
-    ['tooth','teeth','tooths'],['person','people','persons oft'],['life','lives','lifes'],
-    ['knife','knives','knifes'],['leaf','leaves','leafs'],['analysis','analyses','analysises'],
-    ['crisis','crises','crisises']
-  ];
-  const defs = [
-    ['What does "appointment" mean?', 'Termin', ['Zufall','Impfung']],
-    ['What does "symptom" mean?', 'Krankheitszeichen', ['Heilung','Gerät']],
-    ['What does "prevention" mean?', 'Vorbeugung', ['Nachsorge','Zufall']],
-    ['What does "accurate" mean?', 'genau', ['ungenau','laut']],
-    ['What does "urgent" mean?', 'dringend', ['egal','langsam']],
-    ['What does "reliable" mean?', 'zuverlässig', ['unzuverlässig','zufällig']],
-    ['What does "assess" mean?', 'einschätzen/prüfen', ['ignorieren','raten']],
-    ['What does "hygiene" mean?', 'Hygiene/Sauberkeit', ['Sport','Musik']],
-    ['What does "shift" mean (work)?', 'Schicht', ['Urlaub','Pause nur']],
-    ['What does "wound" mean?', 'Wunde', ['Wundermittel','Fenster']]
-  ];
-  const sentences = [
-    ['Complete: "Please __ your hands."', 'wash', ['washing','washes']],
-    ['Complete: "The patient feels __."', 'better', ['goodly','bestly']],
-    ['Complete: "We need more __."', 'time', ['timeliness','timed']],
-    ['Complete: "Call for help in an __."', 'emergency', ['emerge','emergent only']],
-    ['Complete: "Take the medicine __."', 'regularly', ['regular','regularity']],
-    ['Complete: "She works in a __."', 'hospital', ['hospitalize','hospitable']],
-    ['Complete: "Keep the wound __."', 'clean', ['cleanly','cleanliness']],
-    ['Complete: "He has a high __."', 'fever', ['feverish','fevering']],
-    ['Complete: "Document everything __."', 'carefully', ['careful','care']],
-    ['Complete: "The pulse is __."', 'elevated', ['elevate','elevation']]
+    ['hot','cold','warm'],['early','late','soon'],['open','closed','ajar'],['strong','weak','firm'],
+    ['healthy','sick','fit'],['more','less','extra'],['always','never','often'],['before','after','during'],
+    ['with','without','among'],['easy','difficult','simple'],['good','bad','okay'],['new','old','fresh'],
+    ['full','empty','half'],['loud','quiet','soft'],['up','down','across'],['inside','outside','near'],
+    ['arrive','leave','stay'],['accept','reject','consider'],['increase','decrease','measure'],
+    ['success','failure','effort'],['presence','absence','arrival'],['include','exclude','mention'],
+    ['temporary','permanent','short'],['voluntary','compulsory','optional'],['scarce','abundant','rare']
   ];
 
-  const easy = [], medium = [], hard = [];
-  // 8 types × ~12-13 each per band
-  const mix = [13, 12, 13, 12, 13, 12, 13, 12];
+  // Difficulty-scaled grammar banks: [prompt, correct, wrong1, wrong2, tag]
+  const grammarEasy = [
+    ['She __ to work every day.', 'goes', 'go', 'going', '3rd person -s'],
+    ['They __ football on Sundays.', 'play', 'plays', 'playing', 'plural verb'],
+    ['I __ a student.', 'am', 'is', 'are', 'be'],
+    ['He __ not here today.', 'is', 'are', 'am', 'be'],
+    ['We __ hungry.', 'are', 'is', 'am', 'be'],
+    ['__ apple a day…', 'An', 'A', 'The', 'article a/an'],
+    ['She has __ umbrella.', 'an', 'a', 'the', 'article a/an'],
+    ['This is __ book.', 'a', 'an', 'some', 'article'],
+    ['The cat is __ the table.', 'on', 'in', 'at', 'preposition'],
+    ['He lives __ London.', 'in', 'on', 'at', 'preposition city'],
+    ['Meet me __ 5 o\'clock.', 'at', 'in', 'on', 'preposition time'],
+    ['I go to school __ bus.', 'by', 'with', 'on', 'preposition'],
+    ['Yesterday she __ home early.', 'went', 'goed', 'goes', 'irregular past'],
+    ['He __ a letter yesterday.', 'wrote', 'writed', 'writes', 'irregular past'],
+    ['They __ the film last night.', 'saw', 'seed', 'sees', 'irregular past'],
+    ['I __ my keys.', 'lost', 'losed', 'lose', 'irregular past'],
+    ['She __ water every morning.', 'drinks', 'drink', 'drinking', 'SVA'],
+    ['My brother __ TV now.', 'is watching', 'watch', 'watches', 'present continuous'],
+    ['There __ a book on the desk.', 'is', 'are', 'be', 'there is'],
+    ['There __ two chairs.', 'are', 'is', 'be', 'there are'],
+    ['Do you __ English?', 'speak', 'speaks', 'speaking', 'do + infinitive'],
+    ['He does not __ coffee.', 'like', 'likes', 'liking', 'does + infinitive'],
+    ['__ you tired?', 'Are', 'Is', 'Do', 'question be'],
+    ['Where __ she live?', 'does', 'do', 'is', 'wh- question'],
+    ['Please sit __.', 'down', 'up', 'off', 'particle'],
+    ['I am good __ maths.', 'at', 'in', 'on', 'good at'],
+    ['Listen __ me, please.', 'to', 'at', 'for', 'listen to'],
+    ['She looks __ her sister.', 'like', 'as', 'for', 'look like'],
+    ['We __ breakfast at 7.', 'have', 'has', 'having', 'have'],
+    ['He can __ very fast.', 'run', 'runs', 'running', 'modal + infinitive']
+  ];
+  const grammarMed = [
+    ['They __ already left.', 'have', 'has', 'having', 'present perfect'],
+    ['She has __ that film.', 'seen', 'saw', 'see', 'past participle'],
+    ['I have lived here __ 2019.', 'since', 'for', 'during', 'since/for'],
+    ['We have waited __ two hours.', 'for', 'since', 'during', 'since/for'],
+    ['He is interested __ music.', 'in', 'on', 'at', 'interested in'],
+    ['Please look __ the patient.', 'after', 'for', 'to', 'look after'],
+    ['The report was written __ her.', 'by', 'from', 'with', 'passive by'],
+    ['This room is cleaned __ day.', 'every', 'all', 'each of', 'every'],
+    ['If it rains, we __ stay inside.', 'will', 'would', 'would have', '1st conditional'],
+    ['If you heat ice, it __.', 'melts', 'melt', 'melted', 'zero conditional'],
+    ['She suggested that he __ early.', 'arrive', 'arrives', 'arriving', 'subjunctive'],
+    ['Neither of them __ ready.', 'is', 'are', 'be', 'neither + singular'],
+    ['Each of the patients __ a file.', 'has', 'have', 'having', 'each + singular'],
+    ['The news __ surprising.', 'is', 'are', 'were', 'news singular'],
+    ['He __ to the gym twice a week.', 'goes', 'go', 'going', 'habits'],
+    ['I used to __ in Berlin.', 'live', 'lived', 'living', 'used to'],
+    ['She is used to __ early.', 'getting up', 'get up', 'got up', 'be used to + -ing'],
+    ['Could you __ me the salt?', 'pass', 'passing', 'passed', 'polite request'],
+    ['He asked me __ quiet.', 'to be', 'being', 'be', 'ask + to-inf'],
+    ['I look forward to __ you.', 'seeing', 'see', 'saw', 'look forward to + -ing'],
+    ['The medicine must be __ daily.', 'taken', 'take', 'took', 'passive modal'],
+    ['She has been working __ Monday.', 'since', 'for', 'from', 'present perfect cont.'],
+    ['By tomorrow they will have __.', 'finished', 'finish', 'finishing', 'future perfect'],
+    ['He apologized __ being late.', 'for', 'of', 'about', 'apologize for'],
+    ['Depend __ the weather.', 'on', 'of', 'from', 'depend on'],
+    ['She prefers tea __ coffee.', 'to', 'than', 'as', 'prefer to'],
+    ['It is important __ careful.', 'to be', 'being', 'be', 'adj + to-inf'],
+    ['The wound needs __ cleaned.', 'to be', 'being', 'be', 'need + passive'],
+    ['How long __ you been here?', 'have', 'are', 'did', 'perfect question'],
+    ['He rarely __ mistakes.', 'makes', 'make', 'making', 'adverb + SVA']
+  ];
+  const grammarHard = [
+    ['If I __ time, I would help.', 'had', 'have', 'has', '2nd conditional'],
+    ['If she had known, she __ come.', 'would have', 'would', 'will have', '3rd conditional'],
+    ['Had I known, I __ differently.', 'would have acted', 'would act', 'will act', 'inverted 3rd cond.'],
+    ['Not only __ she late, she forgot the keys.', 'was', 'she was', 'is', 'inversion'],
+    ['Seldom __ we seen such care.', 'have', 'we have', 'did', 'negative adverb inversion'],
+    ['Neither the nurse nor the doctors __ available.', 'are', 'is', 'be', 'neither…nor closest'],
+    ['One of the patients __ still waiting.', 'is', 'are', 'be', 'one of + singular'],
+    ['It is vital that he __ on time.', 'be', 'is', 'was', 'mandative subjunctive'],
+    ['She wishes she __ more experience.', 'had', 'has', 'have', 'wish + past'],
+    ['I\'d rather you __ now.', 'left', 'leave', 'leaves', 'would rather + past'],
+    ['Hardly had we arrived __ it started raining.', 'when', 'than', 'then', 'hardly…when'],
+    ['No sooner had he spoken __ the alarm rang.', 'than', 'when', 'that', 'no sooner…than'],
+    ['The patient, along with two aides, __ waiting.', 'is', 'are', 'be', 'along with → singular'],
+    ['What matters most __ safety.', 'is', 'are', 'be', 'clause subject singular'],
+    ['She insisted that the report __ rewritten.', 'be', 'is', 'was', 'insist + subjunctive'],
+    ['Were he taller, he __ reach it.', 'could', 'can', 'will', 'were + conditional'],
+    ['Only after the briefing __ they start.', 'did', 'they did', 'do', 'only after inversion'],
+    ['Despite __ tired, she continued.', 'being', 'she was', 'to be', 'despite + -ing'],
+    ['The more you practice, __ you get.', 'the better', 'better', 'the best', 'the…the'],
+    ['He spoke as if he __ the expert.', 'were', 'was always', 'is', 'as if + were'],
+    ['Little __ they know about the risk.', 'did', 'they did', 'do', 'little + inversion'],
+    ['Should you need help, __ the bell.', 'ring', 'rings', 'ringing', 'should-conditional'],
+    ['Rarely __ such complications occur.', 'do', 'does', 'are', 'rarely + inversion'],
+    ['She is the only one of the staff who __ night shifts.', 'works', 'work', 'working', 'one of who + sg'],
+    ['Under no circumstances __ you open that door.', 'must', 'you must', 'should you not', 'under no… inversion'],
+    ['So rare __ the side effect that few noticed.', 'was', 'it was', 'is', 'so… that inversion'],
+    ['Whoever arrives first __ the room.', 'gets', 'get', 'getting', 'whoever + sg'],
+    ['Between you and __, this is confidential.', 'me', 'I', 'myself', 'object pronoun'],
+    ['She is taller than __ am.', 'I', 'me', 'myself', 'than + subject'],
+    ['All that glitters __ not gold.', 'is', 'are', 'be', 'all that + sg']
+  ];
 
-  function fill(bandArr, band) {
-    let i0 = 0;
-    // EN→DE
-    for (let i = 0; i < mix[0]; i++) {
-      const v = vocab[(i0 + i) % vocab.length];
-      const w = padWrong(v[1], vocab[(i + 7) % vocab.length][1], vocab[(i + 13) % vocab.length][1]);
-      bandArr.push(makeTextQ('"' + v[0] + '" auf Deutsch?', v[1], w, band, v[0] + '=' + v[1], 'en-tr1-' + band[0] + '-' + i));
-    }
-    // DE→EN
-    for (let i = 0; i < mix[1]; i++) {
-      const v = vocab[(i0 + i + 20) % vocab.length];
-      bandArr.push(makeTextQ('"' + v[1] + '" auf Englisch?', v[0], [vocab[(i + 3) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], band, v[1] + '=' + v[0], 'en-tr2-' + band[0] + '-' + i));
-    }
-    // synonym
-    for (let i = 0; i < mix[2]; i++) {
-      const s = syn[i % syn.length];
-      bandArr.push(makeTextQ('Synonym of "' + s[0] + '"?', s[1], [s[2], 'unrelated'], band, 'synonym', 'en-syn-' + band[0] + '-' + i));
-    }
-    // antonym
-    for (let i = 0; i < mix[3]; i++) {
-      const a = ant[i % ant.length];
-      bandArr.push(makeTextQ('Opposite of "' + a[0] + '"?', a[1], ['similar', 'same'], band, 'antonym', 'en-ant-' + band[0] + '-' + i));
-    }
-    // grammar
-    for (let i = 0; i < mix[4]; i++) {
-      const g = grammar[i % grammar.length];
-      const stem = band === 'hard' ? 'Grammar (careful): "' + g[0] + '"' : 'Fill in: "' + g[0] + '"';
-      bandArr.push(makeTextQ(stem, g[1], g[2], band, 'grammar', 'en-gr-' + band[0] + '-' + i));
-    }
-    // plural
-    for (let i = 0; i < mix[5]; i++) {
-      const p = plur[i % plur.length];
-      bandArr.push(makeTextQ('Plural of "' + p[0] + '"?', p[1], [p[2], p[0] + 'es'], band, 'plural', 'en-pl-' + band[0] + '-' + i));
-    }
-    // definition
-    for (let i = 0; i < mix[6]; i++) {
-      const d = defs[i % defs.length];
-      bandArr.push(makeTextQ(d[0], d[1], d[2], band, d[1], 'en-def-' + band[0] + '-' + i));
-    }
-    // sentence
-    for (let i = 0; i < mix[7]; i++) {
-      const s = sentences[i % sentences.length];
-      bandArr.push(makeTextQ(s[0], s[1], s[2], band, 'sentence', 'en-sent-' + band[0] + '-' + i));
-    }
+  const clozeEasy = [
+    ['Please __ your hands before work.', 'wash', 'washing', 'washes'],
+    ['The patient feels __ today.', 'better', 'goodly', 'bestly'],
+    ['We need more __.', 'time', 'timeliness', 'timed'],
+    ['Call for help in an __.', 'emergency', 'emerge', 'emergent'],
+    ['Take the medicine __.', 'regularly', 'regular', 'regularity'],
+    ['She works in a __.', 'hospital', 'hospitalize', 'hospitable'],
+    ['Keep the wound __.', 'clean', 'cleanly', 'cleanliness'],
+    ['He has a high __.', 'fever', 'feverish', 'fevering'],
+    ['Document everything __.', 'carefully', 'careful', 'care'],
+    ['The pulse is __.', 'elevated', 'elevate', 'elevation'],
+    ['Please speak more __.', 'slowly', 'slow', 'slowness'],
+    ['I am __ to help you.', 'ready', 'readily', 'readiness'],
+    ['She arrives __ time.', 'on', 'in', 'at'],
+    ['They wait __ the bus.', 'for', 'to', 'at'],
+    ['He is afraid __ dogs.', 'of', 'from', 'by']
+  ];
+  const clozeMed = [
+    ['By the time we arrived, the meeting __ already started.', 'had', 'has', 'have'],
+    ['She has been a nurse __ five years.', 'for', 'since', 'during'],
+    ['If you __ any pain, tell us immediately.', 'feel', 'felt', 'feeling'],
+    ['The results will be discussed __ the team.', 'with', 'by of', 'from'],
+    ['He managed to finish __ the deadline.', 'before', 'until', 'since'],
+    ['Please make sure the form is filled __ correctly.', 'in', 'on', 'out of'],
+    ['She is responsible __ patient safety.', 'for', 'of', 'about'],
+    ['They decided __ postpone the appointment.', 'to', 'for', 'of'],
+    ['I would like you __ wait outside.', 'to', 'for', 'that'],
+    ['The wound should be checked __ regularly.', 'more', 'most', 'much'],
+    ['He apologized for __ late.', 'being', 'be', 'been'],
+    ['We are looking forward to __ from you.', 'hearing', 'hear', 'heard'],
+    ['She denied __ the message.', 'receiving', 'receive', 'received'],
+    ['It is worth __ the instructions again.', 'reading', 'read', 'to reading'],
+    ['The patient insisted on __ home.', 'going', 'go', 'to go']
+  ];
+  const clozeHard = [
+    ['Had the alarm __ earlier, fewer people would have been at risk.', 'sounded', 'sound', 'sounds'],
+    ['Not until the report was complete __ they leave.', 'did', 'they did', 'had'],
+    ['She would rather the shift __ reassigned.', 'were', 'is', 'be always'],
+    ['No matter how urgent it __, follow the protocol.', 'is', 'be', 'was'],
+    ['Only when vitals stabilize __ discharge be considered.', 'should', 'shall', 'must you'],
+    ['Were the dosage higher, side effects __ more likely.', 'would be', 'will be', 'are'],
+    ['Little did the team know __ would follow.', 'what', 'that', 'which'],
+    ['The sooner we act, __ the outcome.', 'the better', 'better', 'best'],
+    ['She spoke softly so as not __ the patient.', 'to wake', 'waking', 'wake'],
+    ['However tired you __, accuracy matters.', 'are', 'be', 'were'],
+    ['It is high time we __ the procedure.', 'revised', 'revise', 'revising'],
+    ['Much as I sympathize, I cannot __ the rule.', 'bend', 'bending', 'bent'],
+    ['Scarcely had they begun __ an interruption came.', 'when', 'than', 'that'],
+    ['Be that __ it may, document everything.', 'as', 'what', 'how'],
+    ['Lest anyone __, the door must stay locked.', 'forget', 'forgets', 'forgot']
+  ];
+
+  const errorsEasy = [
+    ['Which is correct?', 'She goes to work.', 'She go to work.', 'She going to work.'],
+    ['Which is correct?', 'He is a doctor.', 'He are a doctor.', 'He be a doctor.'],
+    ['Which is correct?', 'I have an apple.', 'I have a apple.', 'I have apple.'],
+    ['Which is correct?', 'They are happy.', 'They is happy.', 'They be happy.'],
+    ['Which is correct?', 'Where does she live?', 'Where do she live?', 'Where she lives?'],
+    ['Which is correct?', 'He went home.', 'He goed home.', 'He goes home yesterday.'],
+    ['Which is correct?', 'There are two beds.', 'There is two beds.', 'There be two beds.'],
+    ['Which is correct?', 'She can swim.', 'She can swims.', 'She cans swim.'],
+    ['Which is correct?', 'I am listening to you.', 'I am listening you.', 'I listening to you.'],
+    ['Which is correct?', 'The book is on the table.', 'The book is in the table.', 'The book is at the table.']
+  ];
+  const errorsMed = [
+    ['Which is correct?', 'She has already left.', 'She have already left.', 'She has already leave.'],
+    ['Which is correct?', 'I have lived here since 2020.', 'I have lived here for 2020.', 'I live here since 2020.'],
+    ['Which is correct?', 'If it rains, we will stay.', 'If it will rain, we stay.', 'If it rains, we would stay yesterday.'],
+    ['Which is correct?', 'He is interested in music.', 'He is interested on music.', 'He is interested at music.'],
+    ['Which is correct?', 'Neither of them is ready.', 'Neither of them are ready.', 'Neither of them be ready.'],
+    ['Which is correct?', 'The news is bad.', 'The news are bad.', 'The news be bad.'],
+    ['Which is correct?', 'I look forward to seeing you.', 'I look forward to see you.', 'I look forward seeing you.'],
+    ['Which is correct?', 'She suggested that he arrive early.', 'She suggested that he arrives early.', 'She suggested that he arriving early.'],
+    ['Which is correct?', 'He apologized for being late.', 'He apologized for be late.', 'He apologized of being late.'],
+    ['Which is correct?', 'By tomorrow they will have finished.', 'By tomorrow they will finish already done.', 'By tomorrow they finished will.']
+  ];
+  const errorsHard = [
+    ['Which is correct?', 'If I had known, I would have helped.', 'If I would have known, I had helped.', 'If I knew, I would have helped yesterday for sure only.'],
+    ['Which is correct?', 'Had I known, I would have acted differently.', 'Had I knew, I would act differently.', 'If I would know, I act differently.'],
+    ['Which is correct?', 'Not only was she late, she forgot the keys.', 'Not only she was late, she forgot the keys.', 'Not only was late she, she forgot the keys.'],
+    ['Which is correct?', 'Hardly had we arrived when it started raining.', 'Hardly we had arrived than it started raining.', 'Hardly had we arrived than it started raining.'],
+    ['Which is correct?', 'It is vital that he be on time.', 'It is vital that he is on time always only.', 'It is vital that he being on time.'],
+    ['Which is correct?', 'Despite being tired, she continued.', 'Despite she was tired, she continued.', 'Despite to be tired, she continued.'],
+    ['Which is correct?', 'The patient, along with two aides, is waiting.', 'The patient, along with two aides, are waiting.', 'The patient along with two aides be waiting.'],
+    ['Which is correct?', 'Under no circumstances must you open that door.', 'Under no circumstances you must open that door.', 'Under no circumstances must open you that door.'],
+    ['Which is correct?', 'No sooner had he spoken than the alarm rang.', 'No sooner had he spoken when the alarm rang.', 'No sooner he had spoken than the alarm rang.'],
+    ['Which is correct?', 'She wishes she had more experience.', 'She wishes she has more experience.', 'She wishes she have more experience.']
+  ];
+
+  const readingEasy = [
+    ['"Break a leg!" means…', 'Good luck', 'Literally hurt your leg', 'Stop walking'],
+    ['"How are you?" is mainly…', 'a greeting', 'a medical exam', 'an order'],
+    ['"See you later" means…', 'Goodbye for now', 'Look at me', 'Come tomorrow only'],
+    ['"Take care" usually means…', 'Look after yourself / goodbye', 'Take this object', 'Be angry'],
+    ['"I\'m fine" usually means…', 'I\'m okay', 'I pay a fine', 'I am finished forever'],
+    ['"Hold on" can mean…', 'Wait a moment', 'Grab forever', 'Leave now'],
+    ['"No problem" means…', 'It\'s okay / you\'re welcome', 'There is a big problem', 'Stop talking'],
+    ['"What\'s up?" often means…', 'How are you / what\'s happening?', 'What is above us?', 'Stand up now'],
+    ['"Keep going" means…', 'Continue', 'Stop', 'Go home'],
+    ['"Calm down" means…', 'Become less agitated', 'Sit on the floor', 'Speak louder']
+  ];
+  const readingMed = [
+    ['"Under the weather" means…', 'slightly ill', 'standing in rain', 'happy'],
+    ['"Call it a day" means…', 'stop working for now', 'phone someone', 'start a new day'],
+    ['"Get the hang of it" means…', 'learn how to do it', 'hang something up', 'forget it'],
+    ['"On the same page" means…', 'in agreement', 'reading a book together', 'standing nearby'],
+    ['"Keep an eye on" means…', 'watch carefully', 'close one eye', 'ignore'],
+    ['"Out of the blue" means…', 'unexpectedly', 'from the sky', 'sadly'],
+    ['"Hit the books" means…', 'study hard', 'throw books', 'buy books'],
+    ['"Piece of cake" means…', 'very easy', 'dessert only', 'expensive'],
+    ['"Spill the beans" means…', 'reveal a secret', 'drop food', 'cook beans'],
+    ['"Cost an arm and a leg" means…', 'very expensive', 'injure limbs', 'cheap']
+  ];
+  const readingHard = [
+    ['"The ball is in your court" means…', 'it\'s your decision/turn to act', 'you play tennis now', 'you are guilty'],
+    ['"Burning the midnight oil" means…', 'working late into the night', 'lighting a lamp only', 'wasting fuel'],
+    ['"A blessing in disguise" means…', 'something good that seemed bad at first', 'a costume party', 'a religious gift'],
+    ['"Bite the bullet" means…', 'endure something unpleasant', 'chew metal', 'refuse firmly'],
+    ['"Cut corners" means…', 'do something cheaply/hastily (often badly)', 'turn sharply', 'save paper'],
+    ['"Go the extra mile" means…', 'do more than expected', 'run farther', 'travel abroad'],
+    ['"Read between the lines" means…', 'understand the implied meaning', 'skip lines', 'read aloud'],
+    ['"Throw in the towel" means…', 'give up', 'wash laundry', 'start fighting'],
+    ['"Once in a blue moon" means…', 'very rarely', 'every full moon', 'often at night'],
+    ['"Keep your chin up" means…', 'stay positive', 'look at the ceiling', 'be quiet']
+  ];
+
+  const colloEasy = [
+    ['Collocation: make __', 'a decision', 'a decide', 'decisioning'],
+    ['Collocation: do __', 'homework', 'a homework', 'homeworks'],
+    ['Collocation: take __', 'a break', 'break', 'breaking'],
+    ['Collocation: have __', 'a shower', 'showering', 'the shower always'],
+    ['Collocation: pay __', 'attention', 'an attention', 'attentions'],
+    ['Collocation: catch __', 'a cold', 'coldness', 'the colds'],
+    ['Collocation: keep __', 'calm', 'calming', 'a calm'],
+    ['Collocation: give __', 'advice', 'an advice', 'advices'],
+    ['Which phrase is natural?', 'by accident', 'on accident', 'with accident'],
+    ['Which phrase is natural?', 'in a hurry', 'on a hurry', 'at a hurry']
+  ];
+  const colloMed = [
+    ['Collocation: heavy __', 'rain', 'rains', 'rainness'],
+    ['Collocation: strong __', 'coffee', 'coffees', 'coffeeness'],
+    ['Collocation: make __', 'progress', 'a progress', 'progresses'],
+    ['Collocation: take __', 'responsibility', 'responsible', 'responsing'],
+    ['Collocation: raise __', 'awareness', 'an awareness', 'aware'],
+    ['Collocation: draw __', 'a conclusion', 'conclusioning', 'conclude'],
+    ['Collocation: meet __', 'a deadline', 'deadline', 'deadlining'],
+    ['Collocation: run __', 'a risk', 'risking', 'risky'],
+    ['Which is the natural phrase?', 'highly likely', 'high likely', 'highly like'],
+    ['Which is the natural phrase?', 'deeply concerned', 'deep concerned', 'deeply concern']
+  ];
+  const colloHard = [
+    ['Collocation: pose __', 'a threat', 'threat', 'threatening'],
+    ['Collocation: reach __', 'a consensus', 'consensus', 'consensual'],
+    ['Collocation: cast __', 'doubt', 'a doubts', 'doubting'],
+    ['Collocation: bear __', 'in mind', 'on mind', 'to mind'],
+    ['Collocation: take __', 'precedence', 'precedent', 'precede'],
+    ['Collocation: exert __', 'pressure', 'pressuring', 'pressured'],
+    ['Collocation: alleviate __', 'pain', 'painful', 'paining'],
+    ['Collocation: conduct __', 'an assessment', 'assessmenting', 'assess'],
+    ['Which is most natural?', 'utterly exhausted', 'very utterly tiredish', 'exhaustedly utter'],
+    ['Which is most natural?', 'widely accepted', 'wide accepted', 'widely accept']
+  ];
+
+  // per band (100): vocab 28% | grammar 20 | syn 8 | ant 8 | cloze 10 | error 10 | reading 8 | collo 8
+  const perType = [14, 14, 20, 8, 8, 10, 10, 8, 8]; // sum 100
+
+  const typesEasy = [], typesMed = [], typesHard = [];
+
+  function poolFor(band, easyP, medP, hardP) {
+    if (band === 'hard') return hardP;
+    if (band === 'medium') return medP;
+    return easyP;
   }
-  fill(easy, 'easy'); fill(medium, 'medium'); fill(hard, 'hard');
-  // diversify medium/hard stems slightly by regenerating ids uniqueness already ok
-  return assemble300(easy, medium, hard);
+
+  function fillType(bandArr, band, count, maker) {
+    for (let i = 0; i < count; i++) bandArr.push(maker(i, band));
+  }
+
+  [['easy', typesEasy], ['medium', typesMed], ['hard', typesHard]].forEach(([band, arr]) => {
+    const gPool = poolFor(band, grammarEasy, grammarMed, grammarHard);
+    const cPool = poolFor(band, clozeEasy, clozeMed, clozeHard);
+    const ePool = poolFor(band, errorsEasy, errorsMed, errorsHard);
+    const rPool = poolFor(band, readingEasy, readingMed, readingHard);
+    const kPool = poolFor(band, colloEasy, colloMed, colloHard);
+    const bandOff = band === 'easy' ? 0 : (band === 'medium' ? 17 : 34);
+
+    // 0 EN→DE vocab (14)
+    fillType(arr, band, perType[0], (i, b) => {
+      const v = vocab[(bandOff + i) % vocab.length];
+      const w = padWrong(v[1], vocab[(i + 7) % vocab.length][1], vocab[(i + 19) % vocab.length][1]);
+      const stem = b === 'hard' ? 'Translate precisely: "' + v[0] + '" → Deutsch?' : ('"' + v[0] + '" auf Deutsch?');
+      return makeTextQ(stem, v[1], w, b, v[0] + '=' + v[1], 'en-tr1-' + b[0] + '-' + i);
+    });
+    // 1 DE→EN vocab (14)
+    fillType(arr, band, perType[1], (i, b) => {
+      const v = vocab[(bandOff + i + 40) % vocab.length];
+      const wrong = padWrong(v[0], vocab[(i + 5) % vocab.length][0], vocab[(i + 11) % vocab.length][0]);
+      const stem = b === 'hard' ? 'Translate precisely: "' + v[1] + '" → English?' : ('"' + v[1] + '" auf Englisch?');
+      return makeTextQ(stem, v[0], wrong, b, v[1] + '=' + v[0], 'en-tr2-' + b[0] + '-' + i);
+    });
+    // 2 grammar (20) — harder pools for higher bands
+    fillType(arr, band, perType[2], (i, b) => {
+      const g = gPool[i % gPool.length];
+      const stem = b === 'hard'
+        ? 'Advanced grammar: "' + g[0] + '"'
+        : (b === 'medium' ? 'Grammar: "' + g[0] + '"' : 'Fill in: "' + g[0] + '"');
+      return makeTextQ(stem, g[1], [g[2], g[3]], b, g[4] || 'grammar', 'en-gr-' + b[0] + '-' + i);
+    });
+    // 3 synonyms (8)
+    fillType(arr, band, perType[3], (i, b) => {
+      const s = syn[(bandOff + i) % syn.length];
+      const stem = b === 'hard' ? 'Closest synonym of "' + s[0] + '" (not opposite)?' : ('Synonym of "' + s[0] + '"?');
+      return makeTextQ(stem, s[1], [s[2], s[3]], b, 'synonym', 'en-syn-' + b[0] + '-' + i);
+    });
+    // 4 antonyms (8)
+    fillType(arr, band, perType[4], (i, b) => {
+      const a = ant[(bandOff + i) % ant.length];
+      const stem = b === 'hard' ? 'Antonym / opposite of "' + a[0] + '"?' : ('Opposite of "' + a[0] + '"?');
+      return makeTextQ(stem, a[1], padWrong(a[1], a[2], syn[i % syn.length][0]), b, 'antonym', 'en-ant-' + b[0] + '-' + i);
+    });
+    // 5 cloze / sentence completion (10)
+    fillType(arr, band, perType[5], (i, b) => {
+      const s = cPool[i % cPool.length];
+      const stem = b === 'medium' ? 'Sentence completion: ' + s[0] : (b === 'hard' ? 'Cloze (precise): ' + s[0] : 'Complete: "' + s[0] + '"');
+      return makeTextQ(stem, s[1], [s[2], s[3]], b, 'cloze', 'en-cloze-' + b[0] + '-' + i);
+    });
+    // 6 error spotting (10)
+    fillType(arr, band, perType[6], (i, b) => {
+      const e = ePool[i % ePool.length];
+      const stem = b === 'hard' ? 'Which sentence is grammatically correct?' : e[0];
+      return makeTextQ(stem, e[1], [e[2], e[3]], b, 'error spotting', 'en-err-' + b[0] + '-' + i);
+    });
+    // 7 reading / phrase meaning (8)
+    fillType(arr, band, perType[7], (i, b) => {
+      const r = rPool[i % rPool.length];
+      return makeTextQ(r[0], r[1], [r[2], r[3]], b, 'phrase meaning', 'en-read-' + b[0] + '-' + i);
+    });
+    // 8 collocations (8)
+    fillType(arr, band, perType[8], (i, b) => {
+      const k = kPool[i % kPool.length];
+      return makeTextQ(k[0], k[1], [k[2], k[3]], b, 'collocation', 'en-col-' + b[0] + '-' + i);
+    });
+  });
+
+  return assemble300(typesEasy, typesMed, typesHard);
 }
 
 // ---------- FRENCH ----------
@@ -1313,7 +1574,7 @@ const state = {
   usedIds: new Set(),
   recentIds: loadJSON('mc_recent_ids', []),
   mistakes: loadJSON('mc_mistakes', []),
-  version: 'v10-diverse-difficulty'
+  version: 'v11-english-grammar-mix'
 };
 
 if (state.darkMode) document.body.classList.add('dark');
