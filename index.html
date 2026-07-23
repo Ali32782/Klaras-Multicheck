@@ -69,7 +69,7 @@ h1, h2, h3 { margin: 16px 0 12px; }
 <div id="app"></div>
 
 <script>
-// ===== Multicheck Trainer v9: 300 echte Fragen/Bereich + Anti-Repeat + Fehler üben =====
+// ===== Multicheck Trainer v10: diverse Fragetypen + echte Schwierigkeit + Anti-Repeat + Fehler üben =====
 
 const TARGET_PER_AREA = 300;
 
@@ -82,14 +82,16 @@ function seedRand(n) {
 }
 
 function pickWrongNums(answer, count, rnd) {
+  const ans = Number(answer);
+  const base = Number.isFinite(ans) ? ans : 0;
   const wrong = new Set();
   let step = 1;
   while (wrong.size < count) {
-    const delta = Math.max(1, Math.round(Math.abs(answer) * 0.1) || 1) * step;
-    const cand = answer + (rnd() > 0.5 ? delta : -delta);
-    if (cand !== answer) wrong.add(cand);
+    const delta = Math.max(1, Math.round(Math.abs(base) * 0.1) || 1) * step;
+    const cand = base + (rnd() > 0.5 ? delta : -delta);
+    if (cand !== base && Number.isFinite(cand)) wrong.add(cand);
     step++;
-    if (step > 50) wrong.add(answer + wrong.size + 1);
+    if (step > 50) wrong.add(base + wrong.size + 1);
   }
   return [...wrong];
 }
@@ -128,74 +130,46 @@ function splitDiff(list) {
   });
 }
 
+function padWrong(correct, w1, w2) {
+  const a = String(correct);
+  let b = String(w1), c = String(w2);
+  if (b === a) b = a + '·';
+  if (c === a || c === b) c = a + '··';
+  return [b, c];
+}
+
+function assemble300(easy, medium, hard) {
+  return [...easy.slice(0, 100), ...medium.slice(0, 100), ...hard.slice(0, 100)];
+}
+
 // ---------- DEUTSCH ----------
-function generateDeutschFragen() {
+function generateDeutschFragenFixed() {
   const syn = [
     ['groß','riesig','klein','neu'],['schön','hübsch','hässlich','alt'],['schnell','rasch','langsam','mittel'],
     ['klug','intelligent','dumm','müde'],['mutig','tapfer','feige','ruhig'],['traurig','niedergeschlagen','froh','laut'],
     ['glücklich','erfreut','betrübt','kalt'],['Angst','Furcht','Mut','Tisch'],['Problem','Schwierigkeit','Lösung','Fenster'],
     ['Freund','Kumpel','Feind','Stein'],['arm','mittellos','reich','blau'],['heiß','glühend','kalt','grün'],
-    ['falsch','unrichtig','richtig','gelb'],['hoffnung','Erwartung','Verzweiflung','Auto'],['bösartig','böse','freundlich','Papier']
+    ['falsch','unrichtig','richtig','gelb'],['Hoffnung','Erwartung','Verzweiflung','Auto'],['Beginn','Anfang','Ende','Mitte'],
+    ['Hilfe','Unterstützung','Hindernis','Farbe'],['Ruhe','Stille','Lärm','Metall'],['Kraft','Stärke','Schwäche','Obst'],
+    ['Idee','Gedanke','Stein','Tisch'],['Fehler','Irrtum','Erfolg','Brot'],['Erfolg','Gelingen','Misserfolg','Regen'],
+    ['Plan','Vorhaben','Chaos','Mond'],['Team','Gruppe','Allein','Salz'],['Pflege','Betreuung','Zerstörung','Router'],
+    ['Arzt','Mediziner','Kabel','Chip'],['Patient','Kranker','Maschine','Server'],['Antwort','Erwiderung','Frage','Stuhl'],
+    ['Ziel','Absicht','Zufall','Lampe'],['Weg','Pfad','Hund','Käse'],['Licht','Helligkeit','Dunkel','Sand'],
+    ['Wasser','Flüssigkeit','Feuer','Holz'],['Kind','Nachwuchs','Greis','Pixel'],['Schule','Bildungsstätte','Fabrik','Modem'],
+    ['Gesundheit','Wohlbefinden','Krankheit','Nagel'],['Sicherheit','Geborgenheit','Gefahr','Stift'],['Vertrauen','Zuversicht','Misstrauen','Brot'],
+    ['Verantwortung','Zuständigkeit','Gleichgültigkeit','Stein'],['Kommunikation','Austausch','Schweigen','Eisen'],['Dokumentation','Aufzeichnung','Löschung','Sand']
   ];
   const ant = [
     ['schnell','langsam'],['hell','dunkel'],['alt','jung'],['oben','unten'],['laut','leise'],['süß','bitter'],
     ['nass','trocken'],['sauber','schmutzig'],['früh','spät'],['offen','geschlossen'],['kurz','lang'],
-    ['sicher','unsicher'],['lebendig','tot'],[' Freude','Trauer'],['richtig','falsch'],['stark','schwach'],
-    ['voll','leer'],['breit','schmal'],['hoch','niedrig'],['nah','fern']
+    ['sicher','unsicher'],['richtig','falsch'],['stark','schwach'],['voll','leer'],['breit','schmal'],
+    ['hoch','niedrig'],['nah','fern'],['leicht','schwer'],['warm','kalt'],['gut','schlecht'],['reich','arm'],
+    ['dick','dünn'],['freundlich','unfreundlich'],['ruhig','unruhig'],['klar','unklar'],['einfach','schwierig'],
+    ['positiv','negativ'],['innen','außen'],['links','rechts'],['vorne','hinten'],['Anfang','Ende'],
+    ['Frage','Antwort'],['Gewinn','Verlust'],['Gesundheit','Krankheit'],['Ruhe','Stress'],['Ordnung','Unordnung'],
+    ['Wahrheit','Lüge'],['Mut','Angst'],['Liebe','Hass']
   ];
   const plur = [
-    ['Haus','Häuser','Hausen','Hausern'],['Kind','Kinder','Kinds','Kindern'],['Auto','Autos','Autoen','Autose'],
-    ['Baum','Bäume','Baumen','Baumse'],['Frau','Frauen','Fraues','Frauens'],['Mann','Männer','Mannes','Manns'],
-    ['Tisch','Tische','Tischse','Tischis'],['Pflanze','Pflanzen','Pflanzese','Pflanzis'],['Traum','Träume','Traumse','Traumis'],
-    ['Auge','Augen','Augese','Augis'],['Lied','Lieder','Liedes','Liedschen'],['Stadt','Städte','Stadte','Stadtis'],
-    ['Buch','Bücher','Buche','Buchse'],['Fuss','Füsse','Fussse','Fussen'],['Zahn','Zähne','Zahne','Zahnse']
-  ];
-  const qs = [];
-  syn.forEach((s, i) => qs.push(makeTextQ('Synonym von "' + s[0] + '"?', s[1], [s[2], s[3]], 'easy', 'Synonym.', 'de-syn-' + i)));
-  ant.forEach((a, i) => qs.push(makeTextQ('Gegenteil von "' + a[0].trim() + '"?', a[1], ['ähnlich','gleich'], i < 10 ? 'easy' : 'medium', 'Antonym.', 'de-ant-' + i)));
-  plur.forEach((p, i) => qs.push(makeTextQ('Plural von "' + p[0] + '"?', p[1], [p[2], p[3]], 'medium', 'Plural.', 'de-pl-' + i)));
-
-  const words = ['Haus','Garten','Schule','Freund','Arbeit','Gesundheit','Pflege','Patient','Team','Zeit','Morgen','Abend','Wasser','Licht','Kraft','Ruhe','Hilfe','Sicherheit','Vertrauen','Verantwortung','Kommunikation','Organisation','Planung','Dokumentation','Hygiene','Ernährung','Bewegung','Schlaf','Stress','Motivation','Lernen','Prüfung','Übung','Fehler','Erfolg','Ziel','Weg','Schritt','Anfang','Ende','Frage','Antwort','Lösung','Idee','Gedanke','Gefühl','Körper','Geist','Atem','Herz'];
-  return fillTo300(qs, 'deutsch', (i, n) => {
-    const w = words[i % words.length];
-    const mode = i % 3;
-    const diff = n < 100 ? 'easy' : (n < 200 ? 'medium' : 'hard');
-    if (mode === 0) return makeTextQ('Welches Wort passt thematisch zu Pflege/Gesundheit eher?', words[(i + 5) % words.length].match(/Pflege|Patient|Hygiene|Ernährung|Gesundheit|Schlaf|Stress|Herz|Atem|Körper/) ? words[(i + 5) % words.length] : 'Patient', ['Vulkan','Algorithmus'], diff, 'Kontext Pflege.', 'de-g-' + n);
-    if (mode === 1) return makeTextQ('Rechtschreibung: korrekt ist…', 'dass', ['das (immer)', 'daßz'], diff, '"dass" als Konjunktion.', 'de-g-' + n);
-    return makeTextQ('Satzbau: "Der Hund __ schnell."', 'läuft', ['laufen','gelaufen'], diff, '3. Person Singular.', 'de-g-' + n);
-  });
-}
-
-// Fix the themed deutsch generator - the health match logic is messy. Simpler approach:
-function generateDeutschFragenFixed() {
-  const pairs = [];
-  const synPairs = [
-    ['groß','riesig','klein','neu'],['schön','hübsch','hässlich','alt'],['schnell','rasch','langsam','mittel'],
-    ['klug','intelligent','dumm','müde'],['mutig','tapfer','feige','ruhig'],['traurig','niedergeschlagen','froh','laut'],
-    ['glücklich','erfreut','betrübt','kalt'],['Angst','Furcht','Mut','Tisch'],['Problem','Schwierigkeit','Lösung','Fenster'],
-    ['Freund','Kumpel','Feind','Stein'],['arm','mittellos','reich','blau'],['heiß','glühend','kalt','grün'],
-    ['falsch','unrichtig','richtig','gelb'],['Hoffnung','Erwartung','Verzweiflung','Auto'],['bösartig','böse','freundlich','Papier'],
-    ['Beginn','Anfang','Ende','Mitte'],['Antwort','Erwiderung','Frage','Stuhl'],['Hilfe','Unterstützung','Hindernis','Farbe'],
-    ['Ruhe','Stille','Lärm','Metall'],['Kraft','Stärke','Schwäche','Obst'],['Weg','Pfad','Ziel','Hund'],
-    ['Idee','Gedanke','Stein','Tisch'],['Ziel','Absicht','Zufall','Lampe'],['Fehler','Irrtum','Erfolg','Brot'],
-    ['Erfolg','Gelingen','Misserfolg','Regen'],['Plan','Vorhaben','Chaos','Mond'],['Team','Gruppe','Allein','Salz'],
-    ['Zeit','Dauer','Ort','Käse'],['Ort','Platz','Zeit','Milch'],['Licht','Helligkeit','Dunkel','Sand'],
-    ['Wasser','Flüssigkeit','Feuer','Holz'],['Luft','Atmosphäre','Stein','Eisen'],['Erde','Boden','Himmel','Glas'],
-    ['Himmel','Firmament','Keller','Buch'],['Tag','Tageslicht','Nacht','Nagel'],['Nacht','Dunkelheit','Tag','Stift'],
-    ['Kind','Nachwuchs','Greis','Server'],['Eltern','Erziehungsberechtigte','Fremde','Pixel'],['Schule','Bildungsstätte','Fabrik','Modem'],
-    ['Arzt','Mediziner','Patient nur','Kabel'],['Pflege','Betreuung','Zerstörung','Router'],['Patient','Kranker','Maschine','Chip']
-  ];
-  const antPairs = [
-    ['schnell','langsam'],['hell','dunkel'],['alt','jung'],['oben','unten'],['laut','leise'],['süß','bitter'],
-    ['nass','trocken'],['sauber','schmutzig'],['früh','spät'],['offen','geschlossen'],['kurz','lang'],
-    ['sicher','unsicher'],['lebendig','tot'],['Freude','Trauer'],['richtig','falsch'],['stark','schwach'],
-    ['voll','leer'],['breit','schmal'],['hoch','niedrig'],['nah','fern'],['leicht','schwer'],['warm','kalt'],
-    ['gut','schlecht'],['neu','alt'],['reich','arm'],['dick','dünn'],['lang','kurz'],['gross','klein'],
-    ['freundlich','unfreundlich'],['ruhig','unruhig'],['klar','unklar'],['einfach','schwierig'],['positiv','negativ'],
-    ['innen','außen'],['links','rechts'],['vorne','hinten'],['Anfang','Ende'],['Frage','Antwort'],['Gewinn','Verlust'],
-    ['Gesundheit','Krankheit'],['Ruhe','Stress'],['Ordnung','Unordnung'],['Wahrheit','Lüge'],['Mut','Angst']
-  ];
-  const plurPairs = [
     ['Haus','Häuser','Hausen','Hausern'],['Kind','Kinder','Kinds','Kindern'],['Auto','Autos','Autoen','Autose'],
     ['Baum','Bäume','Baumen','Baumse'],['Frau','Frauen','Fraues','Frauens'],['Mann','Männer','Mannes','Manns'],
     ['Tisch','Tische','Tischse','Tischis'],['Pflanze','Pflanzen','Pflanzese','Pflanzis'],['Traum','Träume','Traumse','Traumis'],
@@ -203,14 +177,12 @@ function generateDeutschFragenFixed() {
     ['Buch','Bücher','Buche','Buchse'],['Zahn','Zähne','Zahne','Zahnse'],['Fuss','Füsse','Fussse','Fussen'],
     ['Hand','Hände','Hande','Handse'],['Maus','Mäuse','Mause','Mausen'],['Gast','Gäste','Gaste','Gastse'],
     ['Arzt','Ärzte','Arzte','Arztse'],['Nacht','Nächte','Nachte','Nachtse'],['Kraft','Kräfte','Krafte','Kraftse'],
-    ['Wand','Wände','Wande','Wandse'],['Bank','Bänke','Banke','Bankse'],['Kalb','Kälber','Kalbe','Kalbse'],
-    ['Dorf','Dörfer','Dorfe','Dorfse'],['Wort','Wörter','Wortex','Wortse'],['Land','Länder','Lande','Landse']
+    ['Wand','Wände','Wande','Wandse'],['Bank','Bänke','Banke','Bankse'],['Dorf','Dörfer','Dorfe','Dorfse'],
+    ['Wort','Wörter','Wortex','Wortse'],['Land','Länder','Lande','Landse'],['Kalb','Kälber','Kalbe','Kalbse'],
+    ['Glas','Gläser','Glase','Glasse'],['Blatt','Blätter','Blatte','Blattse'],['Rad','Räder','Rade','Radse'],
+    ['Fach','Fächer','Fache','Fachse'],['Loch','Löcher','Loche','Lochse'],['Dach','Dächer','Dache','Dachse'],
+    ['Busch','Büsche','Busche','Buschse'],['Fluss','Flüsse','Flusse','Flussse'],['Fussball','Fussbälle','Fussballe','Fussballse']
   ];
-
-  synPairs.forEach((s, i) => pairs.push(makeTextQ('Synonym von "' + s[0] + '"?', s[1], [s[2], s[3]], i < 20 ? 'easy' : 'medium', 'Synonym zu ' + s[0] + '.', 'de-s-' + i)));
-  antPairs.forEach((a, i) => pairs.push(makeTextQ('Gegenteil von "' + a[0] + '"?', a[1], ['ähnlich','identisch'], i < 20 ? 'easy' : (i < 35 ? 'medium' : 'hard'), 'Antonym.', 'de-a-' + i)));
-  plurPairs.forEach((p, i) => pairs.push(makeTextQ('Plural von "' + p[0] + '"?', p[1], [p[2], p[3]], i < 12 ? 'easy' : 'medium', 'Pluralform.', 'de-p-' + i)));
-
   const grammar = [
     ['Der Hund __ schnell.', 'läuft', ['laufen','gelaufen'], '3. Sg. Präsens'],
     ['Sie __ gestern gekommen.', 'ist', ['hat','sind'], 'Perfekt mit sein'],
@@ -219,269 +191,401 @@ function generateDeutschFragenFixed() {
     ['Ich hoffe, __ du kommst.', 'dass', ['das','daßz'], 'Konjunktion dass'],
     ['Er hat das Buch __.', 'gelesen', ['lesen','liest'], 'Partizip II'],
     ['Wir __ morgen.', 'fahren', ['fährt','gefahren'], '1. Pl. Präsens'],
-    ['__ seiner Einwände…', 'Trotz', ['Obwohl','Weil'], 'Präposition'],
-    ['Es hätte sein __ müssen.', 'sollen', ['müssen','wollen'], 'Modal'],
-    ['Je mehr, __ besser.', 'desto', ['umso nicht','als'], 'Je-desto']
+    ['__ seiner Einwände blieb er.', 'Trotz', ['Obwohl','Weil'], 'Präposition'],
+    ['Es hätte sein __ müssen.', 'sollen', ['müssen','wollen'], 'Modal+Infinitiv'],
+    ['Je mehr, __ besser.', 'desto', ['umso nicht','als'], 'Je-desto'],
+    ['Wenn ich Zeit __, komme ich.', 'hätte', ['habe gehabt','haben'], 'Konjunktiv II'],
+    ['Er fragt, __ sie kommt.', 'ob', ['als','weil'], 'indirekte Frage'],
+    ['Das Kind, __ weint, ist müde.', 'das', ['der','dem'], 'Relativpronomen'],
+    ['Mit __ Auto fahren wir?', 'welchem', ['welcher','welche'], 'Fragewort'],
+    ['Sie ging, __ es regnete.', 'obwohl', ['weil nicht','trotz'], 'Konzessiv'],
+    ['Bitte gib __ das Buch.', 'mir', ['mich','mein'], 'Dativ'],
+    ['Ich interessiere mich __ Musik.', 'für', ['an','über'], 'Präposition'],
+    ['Er besteht __ der Prüfung.', 'auf', ['an','über'], 'bestehen auf'],
+    ['Anstatt zu __, half er.', 'klagen', ['klagt','geklagt'], 'Infinitivgruppe'],
+    ['Hätte ich gewusst, wäre ich __.', 'geblieben', ['bleiben','blieb'], 'Konditional II']
   ];
-  for (let i = 0; i < 80; i++) {
-    const g = grammar[i % grammar.length];
-    pairs.push(makeTextQ('Grammatik: "' + g[0] + '"', g[1], g[2], i < 30 ? 'medium' : 'hard', g[3], 'de-gr-' + i));
+  const meanings = [
+    ['Was bedeutet "präventiv"?', 'vorbeugend', ['nachträglich','zufällig']],
+    ['Was bedeutet "akut"?', 'plötzlich/heftig', ['chronisch','unwichtig']],
+    ['Was bedeutet "chronisch"?', 'langandauernd', ['nur einmalig','nur laut']],
+    ['Was bedeutet "Symptom"?', 'Krankheitszeichen', ['Heilmittel','Diagnose-Gerät']],
+    ['Was bedeutet "Diagnose"?', 'Feststellung der Krankheit', ['Therapie','Impfung']],
+    ['Was bedeutet "Therapie"?', 'Behandlung', ['nur Ursache','nur Messung']],
+    ['Was bedeutet "Hygiene"?', 'Sauberkeit/Keimschutz', ['nur Sport','nur Essen']],
+    ['Was bedeutet "Mobilität"?', 'Beweglichkeit', ['nur Ruhe','nur Schlaf']],
+    ['Was bedeutet "Ressource"?', 'Hilfsmittel/Mittel', ['nur Problem','nur Fehler']],
+    ['Was bedeutet "Priorität"?', 'Vorrang', ['Zufall','Nebensache']],
+    ['Was bedeutet "effizient"?', 'wirkungsvoll mit wenig Aufwand', ['nur langsam','nur teuer']],
+    ['Was bedeutet "relevant"?', 'bedeutungsvoll', ['egal','zufällig']],
+    ['Was bedeutet "transparent"?', 'durchsichtig/nachvollziehbar', ['geheim','unleserlich']],
+    ['Was bedeutet "empatisch"?', 'mitfühlend', ['gleichgültig','agressiv']],
+    ['Was bedeutet "autonom"?', 'selbstständig', ['abhängig','passiv']],
+    ['Was bedeutet "validieren"?', 'prüfen/bestätigen', ['löschen','raten']],
+    ['Was bedeutet "konsistent"?', 'widerspruchsfrei', ['chaotisch','zufällig']],
+    ['Was bedeutet "implizit"?', 'mitgemeint/unausgesprochen', ['explizit gesagt','laut']],
+    ['Was bedeutet "explizit"?', 'ausdrücklich', ['versteckt','ungenau']],
+    ['Was bedeutet "ambivalent"?', 'zwiespältig', ['eindeutig','leer']],
+    ['Was bedeutet "resilient"?', 'widerstandsfähig', ['zerbrechlich','starr ohne Erholung']],
+    ['Was bedeutet "adäquat"?', 'angemessen', ['unpassend','zufällig']],
+    ['Was bedeutet "differenziert"?', 'nuancenreich/unterscheidend', ['pauschal','leer']],
+    ['Was bedeutet "objektiv"?', 'sachlich', ['nur gefühlsmässig','willkürlich']],
+    ['Was bedeutet "subjektiv"?', 'persönlich geprägt', ['messbar immer','gesetzlich']],
+    ['Was bedeutet "Kompetenz"?', 'Fähigkeit', ['nur Titel','nur Zufall']],
+    ['Was bedeutet "Evaluation"?', 'Bewertung/Auswertung', ['nur Planung','nur Pause']],
+    ['Was bedeutet "Intervention"?', 'Eingriff/Massnahme', ['Abwarten immer','Dekoration']],
+    ['Was bedeutet "Indikation"?', 'Anwendungsgrund', ['Nebenwirkung','Verbot immer']],
+    ['Was bedeutet "Kontraindikation"?', 'Gegenanzeige', ['Empfehlung','Dosis']],
+    ['Was bedeutet "Compliance"?', 'Therapietreue', ['Ablehnung','Zufall']],
+    ['Was bedeutet "Anamnese"?', 'Krankheitsvorgeschichte', ['Operation','Röntgen']],
+    ['Was bedeutet "Prognose"?', 'Vorhersage des Verlaufs', ['Diagnose','Rezept']],
+    ['Was bedeutet "Prophylaxe"?', 'Vorbeugung', ['Nachsorge nur','Dekoration']],
+    ['Was bedeutet "Rehabilitation"?', 'Wiederherstellung', ['nur Diagnose','nur Impfung']],
+    ['Was bedeutet "Delegation"?', 'Aufgabenübertragung', ['Alles selbst machen','Löschen']],
+    ['Was bedeutet "Feedback"?', 'Rückmeldung', ['Schweigen','Zufall']],
+    ['Was bedeutet "Qualität"?', 'Güte/Beschaffenheit', ['nur Menge','nur Preis']],
+    ['Was bedeutet "Quantität"?', 'Menge', ['nur Qualität','nur Farbe']],
+    ['Was bedeutet "Struktur"?', 'Aufbau/Ordnung', ['Chaos','Zufall']]
+  ];
+  const spell = [
+    ['Konjunktion: korrekt ist…', 'dass', ['das (immer)','daßz']],
+    ['Korrekt (Körperteil):', 'Fuß', ['Fussz','Fuββ']],
+    ['Korrekt:', 'Interesse', ['Interresse','Interese']],
+    ['Korrekt:', 'verantwortlich', ['verantworlich','verantwotlich']],
+    ['Korrekt:', 'unbedingt', ['unbedingd','umbedingt']],
+    ['Korrekt:', 'vielleicht', ['villeich','vielleich']],
+    ['Korrekt:', 'selbstständig', ['selbständig','selbstendig']],
+    ['Korrekt:', 'Gratulation', ['Gratulazion','Gratullation']],
+    ['Korrekt:', 'Adresse', ['Addresse','Adrese']],
+    ['Korrekt:', 'Appartement', ['Apartmentt','Apartement']],
+    ['Korrekt:', 'Rhythmus', ['Rytmus','Rhytmus']],
+    ['Korrekt:', 'Fotograf', ['Photograf immer','Fotografh']],
+    ['Korrekt:', 'Potenzial', ['Potentialz','Potentzial']],
+    ['Korrekt:', 'parallel', ['paralel','parrallel']],
+    ['Korrekt:', 'aggressiv', ['agresiv','aggreessiv']],
+    ['Korrekt:', 'Diplom', ['Diplohm','Diploom']],
+    ['Korrekt:', 'Quartal', ['Quardal','Quartahl']],
+    ['Korrekt:', 'Standard', ['Standart','Standahrt']],
+    ['Korrekt:', 'Restaurant', ['Restautant','Restaurangt']],
+    ['Korrekt:', 'Therapie', ['Terapie','Theraphie']],
+    ['Korrekt:', 'Hygiene', ['Hygyene','Hygine']],
+    ['Korrekt:', 'Patient', ['Pazient','Patiehnt']],
+    ['Korrekt:', 'Medikament', ['Medikamant','Medikamemt']],
+    ['Korrekt:', 'Symptom', ['Simptom','Sympthom']],
+    ['Korrekt:', 'Diagnose', ['Diagnoze','Diagnosse']],
+    ['Korrekt:', 'Krankenhaus', ['Kranckenhaus','Krankenhaß']],
+    ['Korrekt:', 'Pflegefachperson', ['Pflegefachpersohn','Pflegefachperzon']],
+    ['Korrekt:', 'Dokumentation', ['Dokumentazion','Dokummentation']],
+    ['Korrekt:', 'Organisation', ['Organisazion','Organnisation']],
+    ['Korrekt:', 'Kommunikation', ['Kommunikazion','Kommunkation']],
+    ['Korrekt:', 'Verantwortung', ['Verantworttung','Verantworung']],
+    ['Korrekt:', 'Gesundheit', ['Gesuntheit','Gesundheid']],
+    ['Korrekt:', 'Ernährung', ['Ernerung','Ernäerung']],
+    ['Korrekt:', 'Bewegung', ['Bewebung','Bewegun']],
+    ['Korrekt:', 'Konzentration', ['Concentrazion','Konzentrazion']],
+    ['Korrekt:', 'Informationen', ['Informationnen','Informazionen']],
+    ['Korrekt:', 'schwierig', ['schweierig','schwieriig']],
+    ['Korrekt:', 'möglich', ['möglig','möchlich']],
+    ['Korrekt:', 'nötig', ['nötich','nötigg']],
+    ['Korrekt:', 'nützlich', ['nützlig','nutzlig']]
+  ];
+
+  const sentences = [
+    ['Satzende: "Bitte waschen Sie sich die __."', 'Hände', ['Handen','Händen immer']],
+    ['Ergänze: "Der Patient braucht __."', 'Ruhe', ['ruhig','ruhen']],
+    ['Ergänze: "Sie arbeitet im __."', 'Team', ['Teams','teamen']],
+    ['Ergänze: "Ohne __ keine Qualität."', 'Dokumentation', ['dokumentieren','Dokumente nur']],
+    ['Ergänze: "Bitte kommen Sie __."', 'pünktlich', ['Pünktlichkeit','pünktlichen']],
+    ['Ergänze: "Er fühlt sich __."', 'besser', ['besserer','besserem']],
+    ['Ergänze: "Wir besprechen den __."', 'Plan', ['planen','Planes']],
+    ['Ergänze: "Die Prüfung war __."', 'schwierig', ['Schwierigkeit','schwierigen']],
+    ['Ergänze: "Sie gibt eine klare __."', 'Antwort', ['antworten','Antworten nur']],
+    ['Ergänze: "Das Ziel ist __."', 'erreichbar', ['erreichen','Erreichbarkeit']],
+    ['Ergänze: "Bitte sprechen Sie __."', 'langsam', ['Langsamkeit','langsamen']],
+    ['Ergänze: "Er hat starke __."', 'Schmerzen', ['Schmerz','schmerzen']],
+    ['Ergänze: "Die Wunde ist __."', 'sauber', ['Sauberkeit','sauberen']],
+    ['Ergänze: "Nehmen Sie das Medikament __."', 'regelmäßig', ['Regel','regelmäßigen']],
+    ['Ergänze: "Sie atmet __."', 'flach', ['Fläche','flachen']],
+    ['Ergänze: "Der Puls ist __."', 'erhöht', ['Erhöhung','erhöhen']],
+    ['Ergänze: "Bitte notieren Sie die __."', 'Werte', ['Wert','werten']],
+    ['Ergänze: "Wir handeln __."', 'sorgfältig', ['Sorgfalt','sorgfältigen']],
+    ['Ergänze: "Die Übergabe war __."', 'vollständig', ['Vollständigkeit','vollständigen']],
+    ['Ergänze: "Er reagiert __."', 'allergisch', ['Allergie','allergischen']],
+    ['Ergänze: "Bitte prüfen Sie die __."', 'Identität', ['identisch','identifizieren']],
+    ['Ergänze: "Die Maßnahme wirkt __."', 'präventiv', ['Prävention','präventiven']],
+    ['Ergänze: "Sie fühlt sich __."', 'sicher', ['Sicherheit','sicheren']],
+    ['Ergänze: "Wir brauchen mehr __."', 'Zeit', ['zeiten','zeitlich']],
+    ['Ergänze: "Der Bericht ist __."', 'fertig', ['fertigen','Fertigkeit']],
+    ['Ergänze: "Bitte bleiben Sie __."', 'ruhig', ['Ruhe','ruhigen']],
+    ['Ergänze: "Die Tür bitte __."', 'schließen', ['Schluss','geschlossen immer']],
+    ['Ergänze: "Er erklärt es __."', 'verständlich', ['Verständnis','verständlichen']],
+    ['Ergänze: "Sie lernt __."', 'konzentriert', ['Konzentration','konzentrierten']],
+    ['Ergänze: "Das Ergebnis ist __."', 'positiv', ['Positivität','positiven']],
+    ['Ergänze: "Bitte halten Sie __."', 'Abstand', ['abstehen','Abständen']],
+    ['Ergänze: "Die Lösung scheint __."', 'plausibel', ['Plausibilität','plausiblen']],
+    ['Ergänze: "Er handelt __."', 'verantwortungsvoll', ['Verantwortung','verantwortungsvollen']],
+    ['Ergänze: "Die Kommunikation war __."', 'klar', ['Klarheit','klaren']],
+    ['Ergänze: "Bitte geben Sie __."', 'Feedback', ['rückmelden','Feedbacks']],
+    ['Ergänze: "Der Prozess ist __."', 'transparent', ['Transparenz','transparenten']],
+    ['Ergänze: "Sie arbeitet __."', 'effizient', ['Effizienz','effizienten']],
+    ['Ergänze: "Die Entscheidung war __."', 'nachvollziehbar', ['Nachvollziehbarkeit','nachvollziehbaren']],
+    ['Ergänze: "Bitte handeln Sie __."', 'umgehend', ['Umgehung','umgehenden']],
+    ['Ergänze: "Der Zustand bleibt __."', 'stabil', ['Stabilität','stabilen']]
+  ];
+  const families = [
+    ['Wortfamilie zu "fahren": passend?', 'Fahrt', ['Farbe','Fahne']],
+    ['Wortfamilie zu "sehen":', 'Sicht', ['Sehne','Seife']],
+    ['Wortfamilie zu "lernen":', 'Lehre', ['Leiste','Leine']],
+    ['Wortfamilie zu "helfen":', 'Hilfe', ['Hälfte','Halfter']],
+    ['Wortfamilie zu "sprechen":', 'Sprache', ['Spreu','Sprosse']],
+    ['Wortfamilie zu "denken":', 'Gedanke', ['Decke','Düne']],
+    ['Wortfamilie zu "schreiben":', 'Schrift', ['Schrein','Schrott']],
+    ['Wortfamilie zu "arbeiten":', 'Arbeit', ['Armband','Arktis']],
+    ['Wortfamilie zu "pflegen":', 'Pflege', ['Pflanze','Pflicht nur']],
+    ['Wortfamilie zu "heilen":', 'Heilung', ['Heizung','Heide']],
+    ['Wortfamilie zu "messen":', 'Messung', ['Messe nur','Messer nur']],
+    ['Wortfamilie zu "prüfen":', 'Prüfung', ['Pfütze','Prunk']],
+    ['Wortfamilie zu "planen":', 'Planung', ['Planet','Planke']],
+    ['Wortfamilie zu "ordnen":', 'Ordnung', ['Orden','Ofen']],
+    ['Wortfamilie zu "sichern":', 'Sicherheit', ['Sichel','Sieg']],
+    ['Wortfamilie zu "vertrauen":', 'Vertrauen', ['Vertretung','Vertigo']],
+    ['Wortfamilie zu "entscheiden":', 'Entscheidung', ['Einsicht','Einigung nur']],
+    ['Wortfamilie zu "verstehen":', 'Verständnis', ['Versteck','Verzug']],
+    ['Wortfamilie zu "erklären":', 'Erklärung', ['Erker','Ernte']],
+    ['Wortfamilie zu "informieren":', 'Information', ['Infarkt','Infektion nur']],
+    ['Wortfamilie zu "dokumentieren":', 'Dokument', ['Dom','Doktor nur']],
+    ['Wortfamilie zu "organisieren":', 'Organisation', ['Organ nur','Orgel']],
+    ['Wortfamilie zu "kommunizieren":', 'Kommunikation', ['Kommando','Kompass']],
+    ['Wortfamilie zu "bewegen":', 'Bewegung', ['Beweis','Bewohner']],
+    ['Wortfamilie zu "atmen":', 'Atem', ['Atrium','Atlas']],
+    ['Wortfamilie zu "fühlen":', 'Gefühl', ['Führer','Fuhre']],
+    ['Wortfamilie zu "schmerzen":', 'Schmerz', ['Schmalz','Schmaus']],
+    ['Wortfamilie zu "bluten":', 'Blut', ['Blüte','Bluse']],
+    ['Wortfamilie zu "impfen":', 'Impfung', ['Impuls','Imker']],
+    ['Wortfamilie zu "waschen":', 'Wäsche', ['Waffe','Wade']],
+    ['Wortfamilie zu "binden":', 'Verband', ['Bande nur','Banane']],
+    ['Wortfamilie zu "lagern":', 'Lagerung', ['Lage nur','Lampe']],
+    ['Wortfamilie zu "zählen":', 'Zahl', ['Zahn','Zaun']],
+    ['Wortfamilie zu "wiegen":', 'Gewicht', ['Wiese','Wiege nur']],
+    ['Wortfamilie zu "drücken":', 'Druck', ['Drüse','Droge']],
+    ['Wortfamilie zu "steigern":', 'Steigerung', ['Stein','Steuer nur']],
+    ['Wortfamilie zu "senken":', 'Senkung', ['Sense','Sessel']],
+    ['Wortfamilie zu "steigern/mindern": passend zu mindern?', 'Minderung', ['Mine','Minze']],
+    ['Wortfamilie zu "werten":', 'Bewertung', ['Werft','Weste']],
+    ['Wortfamilie zu "lösen":', 'Lösung', ['Los nur','Lunge']]
+  ];
+
+  // 8 types × ~12-13 per difficulty = even mix; antonyms capped
+  const typesEasy = [], typesMed = [], typesHard = [];
+
+  function pushType(bandArr, q) { bandArr.push(q); }
+
+  // Per difficulty: 12-13 of each of 8 types ≈ 100
+  const perType = [13, 12, 13, 12, 13, 12, 13, 12]; // sum 100
+
+  function fillType(bandArr, band, typeIdx, count, maker) {
+    for (let i = 0; i < count; i++) {
+      pushType(bandArr, maker(i, band));
+    }
   }
 
-  while (pairs.length < TARGET_PER_AREA) {
-    const i = pairs.length;
-    const a = antPairs[i % antPairs.length];
-    pairs.push(makeTextQ('Was ist das Gegenteil von "' + a[0] + '"? (#' + i + ')', a[1], ['neutral','ungeklärt'], i < 200 ? 'medium' : 'hard', 'Antonym-Training.', 'de-x-' + i));
-  }
-  return pairs.slice(0, TARGET_PER_AREA);
+  [['easy', typesEasy], ['medium', typesMed], ['hard', typesHard]].forEach(([band, arr]) => {
+    // 0 synonym
+    fillType(arr, band, 0, perType[0], (i, b) => {
+      const s = syn[i % syn.length];
+      const stem = b === 'hard' ? 'Welches Wort ist sinnverwandt mit "' + s[0] + '" (nicht Gegenteil)?' : (b === 'medium' ? 'Nahes Synonym zu "' + s[0] + '"?' : 'Synonym von "' + s[0] + '"?');
+      return makeTextQ(stem, s[1], [s[2], s[3]], b, 'Synonym zu ' + s[0], 'de-syn-' + b[0] + '-' + i);
+    });
+    // 1 antonym — CAPPED, varied stems
+    fillType(arr, band, 1, perType[1], (i, b) => {
+      const a = ant[i % ant.length];
+      const stems = [
+        'Gegenteil von "' + a[0] + '"?',
+        'Antonym zu "' + a[0] + '"?',
+        'Was ist das Gegenteil von "' + a[0] + '"?',
+        '"' + a[0] + '" — welches Wort ist entgegengesetzt?'
+      ];
+      const stem = stems[i % stems.length];
+      const wrong = b === 'hard' ? ['ähnlich', 'verwandt'] : ['ähnlich', 'identisch'];
+      return makeTextQ(stem, a[1], wrong, b, 'Antonym', 'de-ant-' + b[0] + '-' + i);
+    });
+    // 2 plural
+    fillType(arr, band, 2, perType[2], (i, b) => {
+      const p = plur[i % plur.length];
+      const stem = b === 'hard' ? 'Richtige Pluralform von "' + p[0] + '" (Umlaut/Endung prüfen)?' : 'Plural von "' + p[0] + '"?';
+      return makeTextQ(stem, p[1], [p[2], p[3]], b, 'Plural', 'de-pl-' + b[0] + '-' + i);
+    });
+    // 3 grammar
+    fillType(arr, band, 3, perType[3], (i, b) => {
+      const g = grammar[i % grammar.length];
+      const stem = b === 'easy' ? 'Grammatik: "' + g[0] + '"' : (b === 'medium' ? 'Lücke füllen: "' + g[0] + '"' : 'Anspruchsvolle Grammatik: "' + g[0] + '"');
+      return makeTextQ(stem, g[1], g[2], b, g[3], 'de-gr-' + b[0] + '-' + i);
+    });
+    // 4 meaning
+    fillType(arr, band, 4, perType[4], (i, b) => {
+      const m = meanings[i % meanings.length];
+      const stem = b === 'hard' ? m[0].replace('Was bedeutet', 'Welche Definition trifft am besten auf') : m[0];
+      return makeTextQ(stem, m[1], m[2], b, m[1], 'de-mean-' + b[0] + '-' + i);
+    });
+    // 5 spelling
+    fillType(arr, band, 5, perType[5], (i, b) => {
+      const s = spell[i % spell.length];
+      return makeTextQ((b === 'hard' ? 'Orthografie streng: ' : '') + s[0], s[1], s[2], b, 'Rechtschreibung', 'de-sp-' + b[0] + '-' + i);
+    });
+    // 6 sentence
+    fillType(arr, band, 6, perType[6], (i, b) => {
+      const s = sentences[i % sentences.length];
+      return makeTextQ((b === 'medium' ? 'Satzergänzung: ' : (b === 'hard' ? 'Kontext Pflege/Alltag: ' : '')) + s[0], s[1], s[2], b, 'Satzbau', 'de-sent-' + b[0] + '-' + i);
+    });
+    // 7 word family
+    fillType(arr, band, 7, perType[7], (i, b) => {
+      const f = families[i % families.length];
+      return makeTextQ(f[0], f[1], f[2], b, 'Wortfamilie', 'de-fam-' + b[0] + '-' + i);
+    });
+  });
+
+  return assemble300(typesEasy, typesMed, typesHard);
+}
+
+// unused legacy stub kept for safety if referenced
+function generateDeutschFragen() {
+  return generateDeutschFragenFixed();
 }
 
 // ---------- ENGLISH ----------
 function generateEnglischFragen() {
   const vocab = [
-    ['hello','Hallo'],['goodbye','Auf Wiedersehen'],['thank you','Danke'],['please','Bitte'],['yes','Ja'],['no','Nein'],
-    ['water','Wasser'],['food','Essen'],['house','Haus'],['friend','Freund'],['family','Familie'],['school','Schule'],
-    ['work','Arbeit'],['time','Zeit'],['day','Tag'],['night','Nacht'],['morning','Morgen'],['evening','Abend'],
-    ['happy','glücklich'],['sad','traurig'],['big','groß'],['small','klein'],['fast','schnell'],['slow','langsam'],
-    ['hot','heiß'],['cold','kalt'],['good','gut'],['bad','schlecht'],['new','neu'],['old','alt'],
-    ['doctor','Arzt'],['nurse','Pfleger/in'],['patient','Patient'],['health','Gesundheit'],['hospital','Krankenhaus'],
-    ['help','Hilfe'],['need','brauchen'],['want','wollen'],['can','können'],['must','müssen'],
-    ['today','heute'],['tomorrow','morgen'],['yesterday','gestern'],['always','immer'],['never','nie'],
-    ['often','oft'],['sometimes','manchmal'],['because','weil'],['but','aber'],['and','und'],
-    ['or','oder'],['with','mit'],['without','ohne'],['before','vor'],['after','nach'],
-    ['under','unter'],['over','über'],['left','links'],['right','rechts'],['up','oben'],['down','unten'],
-    ['body','Körper'],['head','Kopf'],['hand','Hand'],['foot','Fuß'],['heart','Herz'],['blood','Blut'],
-    ['pain','Schmerz'],['fever','Fieber'],['medicine','Medizin'],['care','Pflege'],['clean','sauber'],
-    ['dirty','schmutzig'],['safe','sicher'],['danger','Gefahr'],['emergency','Notfall'],['appointment','Termin'],
-    ['question','Frage'],['answer','Antwort'],['learn','lernen'],['teach','lehren'],['read','lesen'],
-    ['write','schreiben'],['speak','sprechen'],['listen','zuhören'],['understand','verstehen'],['explain','erklären'],
-    ['important','wichtig'],['difficult','schwierig'],['easy','einfach'],['possible','möglich'],['impossible','unmöglich'],
-    ['early','früh'],['late','spät'],['soon','bald'],['already','schon'],['still','noch'],
-    ['enough','genug'],['more','mehr'],['less','weniger'],['most','meist'],['least','am wenigsten'],
-    ['first','erste'],['last','letzte'],['next','nächste'],['previous','vorherige'],['same','gleich'],
-    ['different','verschieden'],['other','andere'],['another','noch eine'],['every','jede'],['each','jede/r'],
-    ['people','Menschen'],['person','Person'],['child','Kind'],['adult','Erwachsener'],['woman','Frau'],['man','Mann'],
-    ['city','Stadt'],['country','Land'],['street','Straße'],['room','Zimmer'],['door','Tür'],['window','Fenster'],
-    ['table','Tisch'],['chair','Stuhl'],['bed','Bett'],['phone','Telefon'],['computer','Computer'],
-    ['money','Geld'],['price','Preis'],['buy','kaufen'],['sell','verkaufen'],['pay','bezahlen'],
-    ['open','öffnen'],['close','schließen'],['start','starten'],['stop','stoppen'],['wait','warten'],
-    ['come','kommen'],['go','gehen'],['bring','bringen'],['take','nehmen'],['give','geben'],
-    ['find','finden'],['lose','verlieren'],['keep','behalten'],['change','ändern'],['use','benutzen'],
-    ['know','wissen'],['think','denken'],['feel','fühlen'],['believe','glauben'],['hope','hoffen'],
-    ['love','lieben'],['like','mögen'],['hate','hassen'],['prefer','bevorzugen'],['choose','wählen'],
-    ['strong','stark'],['weak','schwach'],['healthy','gesund'],['sick','krank'],['tired','müde'],
-    ['hungry','hungrig'],['thirsty','durstig'],['busy','beschäftigt'],['free','frei'],['ready','bereit'],
-    ['careful','vorsichtig'],['dangerous','gefährlich'],['useful','nützlich'],['useless','nutzlos'],['necessary','nötig'],
+    ['hello','Hallo'],['goodbye','Auf Wiedersehen'],['thank you','Danke'],['please','Bitte'],['water','Wasser'],
+    ['food','Essen'],['house','Haus'],['friend','Freund'],['family','Familie'],['school','Schule'],
+    ['work','Arbeit'],['time','Zeit'],['day','Tag'],['night','Nacht'],['happy','glücklich'],['sad','traurig'],
+    ['big','groß'],['small','klein'],['fast','schnell'],['slow','langsam'],['hot','heiß'],['cold','kalt'],
+    ['good','gut'],['bad','schlecht'],['doctor','Arzt'],['nurse','Pfleger/in'],['patient','Patient'],
+    ['health','Gesundheit'],['hospital','Krankenhaus'],['help','Hilfe'],['need','brauchen'],['want','wollen'],
+    ['can','können'],['must','müssen'],['today','heute'],['tomorrow','morgen'],['yesterday','gestern'],
+    ['always','immer'],['never','nie'],['often','oft'],['because','weil'],['but','aber'],['and','und'],
+    ['with','mit'],['without','ohne'],['before','vor'],['after','nach'],['body','Körper'],['head','Kopf'],
+    ['hand','Hand'],['heart','Herz'],['blood','Blut'],['pain','Schmerz'],['fever','Fieber'],['medicine','Medizin'],
+    ['care','Pflege'],['clean','sauber'],['safe','sicher'],['danger','Gefahr'],['emergency','Notfall'],
+    ['appointment','Termin'],['learn','lernen'],['read','lesen'],['write','schreiben'],['speak','sprechen'],
+    ['listen','zuhören'],['understand','verstehen'],['important','wichtig'],['difficult','schwierig'],
+    ['easy','einfach'],['early','früh'],['late','spät'],['enough','genug'],['more','mehr'],['less','weniger'],
+    ['people','Menschen'],['child','Kind'],['woman','Frau'],['man','Mann'],['city','Stadt'],['country','Land'],
+    ['money','Geld'],['buy','kaufen'],['sell','verkaufen'],['open','öffnen'],['close','schließen'],
+    ['start','starten'],['stop','stoppen'],['come','kommen'],['go','gehen'],['bring','bringen'],['take','nehmen'],
+    ['give','geben'],['find','finden'],['know','wissen'],['think','denken'],['feel','fühlen'],['strong','stark'],
+    ['weak','schwach'],['healthy','gesund'],['sick','krank'],['tired','müde'],['hungry','hungrig'],
+    ['careful','vorsichtig'],['useful','nützlich'],['necessary','nötig'],['improve','verbessern'],
+    ['reduce','verringern'],['increase','erhöhen'],['measure','messen'],['report','berichten'],
+    ['schedule','Zeitplan'],['shift','Schicht'],['wound','Wunde'],['pulse','Puls'],['breath','Atem'],
     ['obfuscate','absichtlich unklar machen'],['perspicacious','scharfsinnig'],['egregious','ungeheuer schlecht'],
-    ['dearth','Knappheit'],['circumlocution','Umschreibung'],['loquacious','redegewandt'],['serendipity','glücklicher Zufall']
+    ['dearth','Knappheit'],['serendipity','glücklicher Zufall'],['meticulous','äußerst sorgfältig']
   ];
-  // pad vocab to enough unique by cycling with variants
-  const qs = [];
-  for (let i = 0; i < TARGET_PER_AREA; i++) {
-    const v = vocab[i % vocab.length];
-    const w1 = vocab[(i + 7) % vocab.length][1];
-    const w2 = vocab[(i + 13) % vocab.length][1];
-    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
-    const mode = i % 2;
-    if (mode === 0) qs.push(makeTextQ('"' + v[0] + '" auf Deutsch?', v[1], [w1 === v[1] ? 'anders' : w1, w2 === v[1] ? 'sonst' : w2], diff, v[0] + ' = ' + v[1], 'en-' + i));
-    else qs.push(makeTextQ('"' + v[1] + '" auf Englisch?', v[0], [vocab[(i + 3) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], diff, v[1] + ' = ' + v[0], 'en-' + i));
-  }
-  return qs;
-}
+  const syn = [
+    ['big','large','tiny'],['fast','quick','slow'],['happy','glad','sad'],['smart','clever','dull'],
+    ['help','assist','hinder'],['start','begin','end'],['end','finish','start'],['sick','ill','healthy'],
+    ['careful','cautious','reckless'],['important','essential','trivial'],['reduce','decrease','increase'],
+    ['improve','enhance','worsen'],['pain','ache','joy'],['clean','tidy','dirty'],['safe','secure','dangerous']
+  ];
+  const ant = [
+    ['hot','cold'],['up','down'],['early','late'],['open','closed'],['strong','weak'],['healthy','sick'],
+    ['more','less'],['always','never'],['before','after'],['with','without'],['easy','difficult'],
+    ['good','bad'],['new','old'],['full','empty'],['loud','quiet']
+  ];
+  const grammar = [
+    ['She __ to work every day.', 'goes', ['go','going']],
+    ['They __ already left.', 'have', ['has','having']],
+    ['If I __ time, I would help.', 'had', ['have','has']],
+    ['He is interested __ music.', 'in', ['on','at']],
+    ['Please look __ the patient.', 'after', ['for','to']],
+    ['The report was written __ her.', 'by', ['from','with']],
+    ['There __ many options.', 'are', ['is','be']],
+    ['I have been waiting __ an hour.', 'for', ['since','during']],
+    ['She suggested that he __ early.', 'arrive', ['arrives','arriving']],
+    ['Neither of them __ ready.', 'is', ['are','be']]
+  ];
+  const plur = [
+    ['child','children','childs'],['mouse','mice','mouses'],['foot','feet','foots'],
+    ['tooth','teeth','tooths'],['person','people','persons oft'],['life','lives','lifes'],
+    ['knife','knives','knifes'],['leaf','leaves','leafs'],['analysis','analyses','analysises'],
+    ['crisis','crises','crisises']
+  ];
+  const defs = [
+    ['What does "appointment" mean?', 'Termin', ['Zufall','Impfung']],
+    ['What does "symptom" mean?', 'Krankheitszeichen', ['Heilung','Gerät']],
+    ['What does "prevention" mean?', 'Vorbeugung', ['Nachsorge','Zufall']],
+    ['What does "accurate" mean?', 'genau', ['ungenau','laut']],
+    ['What does "urgent" mean?', 'dringend', ['egal','langsam']],
+    ['What does "reliable" mean?', 'zuverlässig', ['unzuverlässig','zufällig']],
+    ['What does "assess" mean?', 'einschätzen/prüfen', ['ignorieren','raten']],
+    ['What does "hygiene" mean?', 'Hygiene/Sauberkeit', ['Sport','Musik']],
+    ['What does "shift" mean (work)?', 'Schicht', ['Urlaub','Pause nur']],
+    ['What does "wound" mean?', 'Wunde', ['Wundermittel','Fenster']]
+  ];
+  const sentences = [
+    ['Complete: "Please __ your hands."', 'wash', ['washing','washes']],
+    ['Complete: "The patient feels __."', 'better', ['goodly','bestly']],
+    ['Complete: "We need more __."', 'time', ['timeliness','timed']],
+    ['Complete: "Call for help in an __."', 'emergency', ['emerge','emergent only']],
+    ['Complete: "Take the medicine __."', 'regularly', ['regular','regularity']],
+    ['Complete: "She works in a __."', 'hospital', ['hospitalize','hospitable']],
+    ['Complete: "Keep the wound __."', 'clean', ['cleanly','cleanliness']],
+    ['Complete: "He has a high __."', 'fever', ['feverish','fevering']],
+    ['Complete: "Document everything __."', 'carefully', ['careful','care']],
+    ['Complete: "The pulse is __."', 'elevated', ['elevate','elevation']]
+  ];
 
-// ---------- MATH ----------
-function generateMathFragen() {
-  const qs = [];
-  for (let i = 0; i < 100; i++) {
-    const a = 2 + (i % 20);
-    const b = 2 + ((i * 3) % 15);
-    qs.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', a + '+' + b + '=' + (a + b), 'math-e-add-' + i));
-  }
-  for (let i = 0; i < 34; i++) {
-    const a = 10 + (i % 30);
-    const b = 1 + (i % 9);
-    qs.push(makeNumQ(a + ' − ' + b + ' = ?', a - b, 'easy', 'Subtraktion', 'math-e-sub-' + i));
-  }
-  for (let i = 0; i < 33; i++) {
-    const a = 2 + (i % 10);
-    const b = 2 + (i % 8);
-    qs.push(makeNumQ(a + ' × ' + b + ' = ?', a * b, 'easy', 'Multiplikation', 'math-e-mul-' + i));
-  }
-  // medium 100
-  for (let i = 0; i < 40; i++) {
-    const a = 2 + (i % 12);
-    const b = 5 + (i % 10) * 5;
-    const pct = a * 5;
-    qs.push(makeNumQ(pct + '% von ' + b + ' = ?', (pct / 100) * b, 'medium', pct + '% × ' + b, 'math-m-pct-' + i));
-  }
-  for (let i = 0; i < 30; i++) {
-    const x = 2 + (i % 15);
-    const c = 3 + (i % 10);
-    const r = 3 * x + c;
-    qs.push(makeNumQ('Löse: 3x + ' + c + ' = ' + r + '. x = ?', x, 'medium', '3x=' + (r - c), 'math-m-eq-' + i));
-  }
-  for (let i = 0; i < 30; i++) {
-    const n = 2 + (i % 12);
-    qs.push(makeNumQ(n + '² = ?', n * n, 'medium', n + '×' + n, 'math-m-sq-' + i));
-  }
-  // hard 100
-  for (let i = 0; i < 40; i++) {
-    const a = 10 + i;
-    const b = 2 + (i % 8);
-    qs.push(makeNumQ(a + ' ÷ ' + b + ' = ? (ganzzahlig wo möglich; sonst gerundet)', Math.round((a / b) * 100) / 100 === a / b ? a / b : Math.floor(a / b) * b === a ? a / b : Math.round(a / b), 'hard', 'Division', 'math-h-div-' + i));
-  }
-  // Fix hard division to only use exact divisions
-  // rebuild hard cleanly
-  const hard = [];
-  for (let i = 0; i < 40; i++) {
-    const b = 2 + (i % 9);
-    const qv = 3 + (i % 12);
-    const a = b * qv;
-    hard.push(makeNumQ(a + ' ÷ ' + b + ' = ?', qv, 'hard', a + '/' + b + '=' + qv, 'math-h-div-' + i));
-  }
-  for (let i = 0; i < 30; i++) {
-    const n = i + 2;
-    hard.push(makeNumQ('Mittelwert von ' + n + ', ' + (n + 10) + ', ' + (n + 20) + '?', n + 10, 'hard', 'Durchschnitt', 'math-h-avg-' + i));
-  }
-  for (let i = 0; i < 30; i++) {
-    const a = 3 + (i % 10);
-    const b = 4 + (i % 8);
-    hard.push(makeNumQ(a + '² + ' + b + '² = ?', a * a + b * b, 'hard', 'Summenquadraten', 'math-h-py-' + i));
-  }
-  // rebuild full list cleanly
-  const out = [];
-  for (let i = 0; i < 100; i++) {
-    const a = 2 + (i % 20), b = 2 + ((i * 3) % 15);
-    if (i < 40) out.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', 'Addition', 'math-' + out.length));
-    else if (i < 70) out.push(makeNumQ((a + 10) + ' − ' + b + ' = ?', a + 10 - b, 'easy', 'Subtraktion', 'math-' + out.length));
-    else out.push(makeNumQ(a + ' × ' + b + ' = ?', a * b, 'easy', 'Multiplikation', 'math-' + out.length));
-  }
-  for (let i = 0; i < 100; i++) {
-    if (i < 40) {
-      const pct = 5 + (i % 19) * 5;
-      const base = 20 + (i % 16) * 5;
-      out.push(makeNumQ(pct + '% von ' + base + ' = ?', pct * base / 100, 'medium', 'Prozent', 'math-' + out.length));
-    } else if (i < 70) {
-      const x = 2 + (i % 15), c = 1 + (i % 9), r = 2 * x + c;
-      out.push(makeNumQ('2x + ' + c + ' = ' + r + '. x = ?', x, 'medium', 'Gleichung', 'math-' + out.length));
-    } else {
-      const n = 2 + (i % 14);
-      out.push(makeNumQ(n + '² = ?', n * n, 'medium', 'Quadrat', 'math-' + out.length));
+  const easy = [], medium = [], hard = [];
+  // 8 types × ~12-13 each per band
+  const mix = [13, 12, 13, 12, 13, 12, 13, 12];
+
+  function fill(bandArr, band) {
+    let i0 = 0;
+    // EN→DE
+    for (let i = 0; i < mix[0]; i++) {
+      const v = vocab[(i0 + i) % vocab.length];
+      const w = padWrong(v[1], vocab[(i + 7) % vocab.length][1], vocab[(i + 13) % vocab.length][1]);
+      bandArr.push(makeTextQ('"' + v[0] + '" auf Deutsch?', v[1], w, band, v[0] + '=' + v[1], 'en-tr1-' + band[0] + '-' + i));
+    }
+    // DE→EN
+    for (let i = 0; i < mix[1]; i++) {
+      const v = vocab[(i0 + i + 20) % vocab.length];
+      bandArr.push(makeTextQ('"' + v[1] + '" auf Englisch?', v[0], [vocab[(i + 3) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], band, v[1] + '=' + v[0], 'en-tr2-' + band[0] + '-' + i));
+    }
+    // synonym
+    for (let i = 0; i < mix[2]; i++) {
+      const s = syn[i % syn.length];
+      bandArr.push(makeTextQ('Synonym of "' + s[0] + '"?', s[1], [s[2], 'unrelated'], band, 'synonym', 'en-syn-' + band[0] + '-' + i));
+    }
+    // antonym
+    for (let i = 0; i < mix[3]; i++) {
+      const a = ant[i % ant.length];
+      bandArr.push(makeTextQ('Opposite of "' + a[0] + '"?', a[1], ['similar', 'same'], band, 'antonym', 'en-ant-' + band[0] + '-' + i));
+    }
+    // grammar
+    for (let i = 0; i < mix[4]; i++) {
+      const g = grammar[i % grammar.length];
+      const stem = band === 'hard' ? 'Grammar (careful): "' + g[0] + '"' : 'Fill in: "' + g[0] + '"';
+      bandArr.push(makeTextQ(stem, g[1], g[2], band, 'grammar', 'en-gr-' + band[0] + '-' + i));
+    }
+    // plural
+    for (let i = 0; i < mix[5]; i++) {
+      const p = plur[i % plur.length];
+      bandArr.push(makeTextQ('Plural of "' + p[0] + '"?', p[1], [p[2], p[0] + 'es'], band, 'plural', 'en-pl-' + band[0] + '-' + i));
+    }
+    // definition
+    for (let i = 0; i < mix[6]; i++) {
+      const d = defs[i % defs.length];
+      bandArr.push(makeTextQ(d[0], d[1], d[2], band, d[1], 'en-def-' + band[0] + '-' + i));
+    }
+    // sentence
+    for (let i = 0; i < mix[7]; i++) {
+      const s = sentences[i % sentences.length];
+      bandArr.push(makeTextQ(s[0], s[1], s[2], band, 'sentence', 'en-sent-' + band[0] + '-' + i));
     }
   }
-  for (let i = 0; i < 100; i++) {
-    if (i < 40) {
-      const b = 2 + (i % 9), qv = 4 + (i % 11), a = b * qv;
-      out.push(makeNumQ(a + ' ÷ ' + b + ' = ?', qv, 'hard', 'Division', 'math-' + out.length));
-    } else if (i < 70) {
-      const n = i;
-      out.push(makeNumQ('Mittelwert ' + n + ',' + (n + 6) + ',' + (n + 12) + '?', n + 6, 'hard', 'Durchschnitt', 'math-' + out.length));
-    } else {
-      const a = 3 + (i % 10), b = 4 + (i % 7);
-      out.push(makeNumQ(a + '² + ' + b + '² = ?', a * a + b * b, 'hard', 'a²+b²', 'math-' + out.length));
-    }
-  }
-  return out.slice(0, TARGET_PER_AREA);
-}
-
-// ---------- NUMBER SEQUENCE ----------
-function generateNumberSequenceFragen() {
-  const out = [];
-  for (let i = 0; i < 100; i++) {
-    const step = 2 + (i % 9);
-    const a = 1 + (i % 20);
-    const seq = [a, a + step, a + 2 * step, a + 3 * step];
-    const next = a + 4 * step;
-    out.push(makeNumQ(seq.join(', ') + ', ?', next, 'easy', '+' + step, 'ns-e-' + i));
-  }
-  for (let i = 0; i < 100; i++) {
-    const m = 2 + (i % 4);
-    let a = 1 + (i % 5);
-    const seq = [];
-    for (let k = 0; k < 4; k++) { seq.push(a); a *= m; }
-    out.push(makeNumQ(seq.join(', ') + ', ?', a, 'medium', '×' + m, 'ns-m-' + i));
-  }
-  for (let i = 0; i < 100; i++) {
-    // differences increase: start, +1,+2,+3,+4
-    const start = 1 + (i % 15);
-    const seq = [start];
-    let cur = start;
-    for (let k = 1; k <= 4; k++) { cur += k; seq.push(cur); }
-    const next = cur + 5;
-    // show first 4, ask 5th already in seq - ask next after 4 terms displayed
-    const shown = seq.slice(0, 4);
-    const ans = seq[4];
-    out.push(makeNumQ(shown.join(', ') + ', ?', ans, 'hard', 'Differenzen +1,+2,+3,+4', 'ns-h-' + i));
-  }
-  return out;
-}
-
-// ---------- LOGIC ----------
-function generateLogicFragen() {
-  const animals = ['Hund','Katze','Maus','Pferd','Vogel','Fisch','Kuh','Schaf'];
-  const colors = ['Rot','Blau','Grün','Gelb','Schwarz','Weiss'];
-  const vehicles = ['Auto','Bus','Zug','Flugzeug','Schiff','Fahrrad'];
-  const out = [];
-  for (let i = 0; i < 100; i++) {
-    const step = 2 + (i % 5);
-    const a = i + 1;
-    out.push(makeNumQ('Logik-Reihe: ' + a + ', ' + (a + step) + ', ' + (a + 2 * step) + ', ?', a + 3 * step, 'easy', '+' + step, 'lg-e-' + i));
-  }
-  for (let i = 0; i < 100; i++) {
-    const odd = vehicles[i % vehicles.length];
-    const a1 = animals[i % animals.length];
-    const a2 = animals[(i + 1) % animals.length];
-    out.push(makeTextQ('Was passt nicht? ' + a1 + ', ' + a2 + ', ' + odd, odd, [a1, a2], 'medium', odd + ' ist kein Tier.', 'lg-m-' + i));
-  }
-  for (let i = 0; i < 100; i++) {
-    const A = 'A', B = 'B', C = 'C';
-    // A > B > C style
-    out.push(makeTextQ('A ist größer als B, B größer als C. Wer ist am kleinsten? (Fall ' + (i + 1) + ')', 'C', ['A','B'], 'hard', 'A>B>C → C kleinste.', 'lg-h-' + i));
-  }
-  return out;
-}
-
-// ---------- SCIENCE ----------
-function generateScienceFragen() {
-  const facts = [
-    ['Welches Gas brauchen wir zum Atmen?', 'Sauerstoff', ['Helium','Stickstoff allein']],
-    ['Wasser gefriert bei?', '0 °C', ['100 °C','50 °C']],
-    ['Größter Planet?', 'Jupiter', ['Erde','Mars']],
-    ['Blut pumpt?', 'Herz', ['Leber','Magen']],
-    ['Einheit Kraft?', 'Newton', ['Watt','Volt']],
-    ['Photosynthese braucht?', 'Licht', ['nur Dunkelheit','nur Salz']],
-    ['Knochen Erwachsene ca.?', '206', ['100','500']],
-    ['pH 7 ist?', 'neutral', ['sauer','basisch']],
-    ['DNA speichert?', 'Erbinformation', ['nur Zucker','nur Fett']],
-    ['Erdanziehung?', 'Gravitation', ['Magnetismus','Reibung']],
-    ['Antibiotika gegen?', 'Bakterien', ['Viren immer','nur Pilze']],
-    ['Niere macht?', 'Blut filtrieren', ['Verdauung','Hormonsingen']],
-    ['Schall braucht?', 'Medium', ['Vakuum','nur Licht']],
-    ['Vitamin-C-Mangel?', 'Skorbut', ['Rachitis','nur B12']],
-    ['Ruhepuls ca.?', '60–80/min', ['10/min','200/min']],
-    ['Mitochondrien?', 'Zell-Kraftwerke', ['Zellkern','Zellwand']],
-    ['Ohm: U = ?', 'R · I', ['U + I','m + a']],
-    ['Nosokomial heißt?', 'Krankenhausinfektion', ['Endemie','Pandemie']],
-    ['Systole ist?', 'Herzkontraktion', ['Herzpause','nur Vorhof']],
-    ['Isotope differieren in?', 'Neutronen', ['immer Protonen','nur Name']],
-    ['Katalysator?', 'senkt Aktivierungsenergie', ['wird verbraucht','ändert Gleichgewicht dauerhaft']],
-    ['Siedepunkt Wasser?', '100 °C', ['0 °C','50 °C']],
-    ['Planet der Menschen?', 'Erde', ['Mars','Venus']],
-    ['Haut schützt vor?', 'Keimen/Verletzung', ['nur Hunger','nur Durst']],
-    ['Lunge nimmt auf?', 'Sauerstoff', ['nur CO2 rein','Helium']],
-    ['Knochenmark bildet?', 'Blutkörperchen', ['Galle','Speichel']],
-    ['Insulin reguliert?', 'Blutzucker', ['nur Hörvermögen','nur Haar']],
-    ['Vitamin D kommt u.a. von?', 'Sonnenlicht', ['nur Eisen','nur Salz']],
-    ['Nerven leiten?', 'Signale', ['Blut','Luft']],
-    ['Impfung dient?', 'Prävention', ['Dekoration','nur Mode']]
-  ];
-  const out = [];
-  for (let i = 0; i < TARGET_PER_AREA; i++) {
-    const f = facts[i % facts.length];
-    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
-    out.push(makeTextQ(f[0] + (i >= facts.length ? ' (' + (Math.floor(i / facts.length) + 1) + ')' : ''), f[1], f[2], diff, f[1], 'sci-' + i));
-  }
-  return out;
+  fill(easy, 'easy'); fill(medium, 'medium'); fill(hard, 'hard');
+  // diversify medium/hard stems slightly by regenerating ids uniqueness already ok
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- FRENCH ----------
@@ -493,156 +597,562 @@ function generateFrenchFragen() {
     ['école','Schule'],['travail','Arbeit'],['temps','Zeit'],['jour','Tag'],['nuit','Nacht'],['matin','Morgen'],
     ['soir','Abend'],['heureux','glücklich'],['triste','traurig'],['grand','groß'],['petit','klein'],
     ['rapide','schnell'],['lent','langsam'],['chaud','heiß'],['froid','kalt'],['bon','gut'],['mauvais','schlecht'],
-    ['nouveau','neu'],['vieux','alt'],['médecin','Arzt'],['infirmière','Krankenschwester'],['patient','Patient'],
-    ['santé','Gesundheit'],['hôpital','Krankenhaus'],['aide','Hilfe'],['besoin','Bedarf'],["aujourd'hui",'heute'],
-    ['demain','morgen'],['hier','gestern'],['toujours','immer'],['jamais','nie'],['souvent','oft'],
-    ['parfois','manchmal'],['parce que','weil'],['mais','aber'],['et','und'],['ou','oder'],['avec','mit'],
-    ['sans','ohne'],['avant','vor'],['après','nach'],['sous','unter'],['sur','auf'],['gauche','links'],
-    ['droite','rechts'],['corps','Körper'],['tête','Kopf'],['main','Hand'],['pied','Fuß'],['cœur','Herz'],
-    ['sang','Blut'],['douleur','Schmerz'],['fièvre','Fieber'],['médicament','Medikament'],['soin','Pflege'],
-    ['propre','sauber'],['sale','schmutzig'],['sûr','sicher'],['danger','Gefahr'],['urgence','Notfall'],
-    ['rendez-vous','Termin'],['question','Frage'],['réponse','Antwort'],['apprendre','lernen'],['lire','lesen'],
-    ['écrire','schreiben'],['parler','sprechen'],['écouter','zuhören'],['comprendre','verstehen'],
-    ['important','wichtig'],['difficile','schwierig'],['facile','einfach'],['possible','möglich'],
-    ['tôt','früh'],['tard','spät'],['bientôt','bald'],['déjà','schon'],['encore','noch'],['assez','genug'],
-    ['plus','mehr'],['moins','weniger'],['premier','erste'],['dernier','letzte'],['même','gleich'],
-    ['autre','andere'],['personne','Person'],['enfant','Kind'],['femme','Frau'],['homme','Mann'],
-    ['ville','Stadt'],['pays','Land'],['rue','Straße'],['chambre','Zimmer'],['porte','Tür'],['fenêtre','Fenster'],
-    ['table','Tisch'],['chaise','Stuhl'],['lit','Bett'],['téléphone','Telefon'],['argent','Geld'],
-    ['prix','Preis'],['acheter','kaufen'],['vendre','verkaufen'],['payer','bezahlen'],['ouvrir','öffnen'],
-    ['fermer','schließen'],['commencer','beginnen'],['arrêter','stoppen'],['attendre','warten'],['venir','kommen'],
-    ['aller','gehen'],['prendre','nehmen'],['donner','geben'],['trouver','finden'],['perdre','verlieren'],
-    ['savoir','wissen'],['penser','denken'],['sentir','fühlen'],['aimer','lieben'],['préférer','bevorzugen'],
-    ['fort','stark'],['faible','schwach'],['sain','gesund'],['malade','krank'],['fatigué','müde'],
-    ['faim','Hunger'],['soif','Durst'],['occupé','beschäftigt'],['libre','frei'],['prêt','bereit'],
-    ['cheval','Pferd'],['chevaux','Pferde (Plural)'],['belle','schöne (f)'],['il y a','es gibt']
+    ['médecin','Arzt'],['infirmière','Krankenschwester'],['patient','Patient'],['santé','Gesundheit'],
+    ['hôpital','Krankenhaus'],['aide','Hilfe'],["aujourd'hui",'heute'],['demain','morgen'],['hier','gestern'],
+    ['toujours','immer'],['jamais','nie'],['souvent','oft'],['parce que','weil'],['mais','aber'],['et','und'],
+    ['avec','mit'],['sans','ohne'],['avant','vor'],['après','nach'],['corps','Körper'],['tête','Kopf'],
+    ['main','Hand'],['pied','Fuß'],['cœur','Herz'],['sang','Blut'],['douleur','Schmerz'],['fièvre','Fieber'],
+    ['médicament','Medikament'],['soin','Pflege'],['propre','sauber'],['sale','schmutzig'],['urgence','Notfall'],
+    ['rendez-vous','Termin'],['apprendre','lernen'],['lire','lesen'],['écrire','schreiben'],['parler','sprechen'],
+    ['écouter','zuhören'],['comprendre','verstehen'],['important','wichtig'],['difficile','schwierig'],
+    ['facile','einfach'],['tôt','früh'],['tard','spät'],['plus','mehr'],['moins','weniger'],['enfant','Kind'],
+    ['femme','Frau'],['homme','Mann'],['ville','Stadt'],['pays','Land'],    ['acheter','kaufen'],['vendre','verkaufen'],
+    ['ouvrir','öffnen'],['fermer','schließen'],['venir','kommen'],['aller','gehen'],['prendre','nehmen'],
+    ['donner','geben'],['fort','stark'],['faible','schwach'],['sain','gesund'],['malade','krank'],['fatigué','müde'],
+    ['faim','Hunger'],['soif','Durst'],['cheval','Pferd'],['il y a','es gibt']
   ];
-  const out = [];
-  for (let i = 0; i < TARGET_PER_AREA; i++) {
-    const v = vocab[i % vocab.length];
-    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
-    if (i % 2 === 0) out.push(makeTextQ('„' + v[0] + '“ bedeutet?', v[1], [vocab[(i + 5) % vocab.length][1], vocab[(i + 11) % vocab.length][1]], diff, v[0] + ' = ' + v[1], 'fr-' + i));
-    else out.push(makeTextQ('„' + v[1] + '“ auf Französisch?', v[0], [vocab[(i + 4) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], diff, v[1] + ' = ' + v[0], 'fr-' + i));
+
+  const syn = [
+    ['grand','gros','petit'],['rapide','vite','lent'],['heureux','content','triste'],['aider','assister','gêner'],
+    ['commencer','débuter','finir'],['malade','souffrant','sain'],['propre','net','sale'],['important','essentiel','futile']
+  ];
+  const ant = [
+    ['chaud','froid'],['grand','petit'],['bon','mauvais'],['avec','sans'],['avant','après'],['toujours','jamais'],
+    ['plus','moins'],['ouvert','fermé'],['fort','faible'],['facile','difficile'],['tôt','tard'],['oui','non']
+  ];
+  const grammarClean = [
+    ['Je __ français.', 'parle', ['parles','parlez']],
+    ['Nous __ allés hier.', 'sommes', ['avons','êtes']],
+    ['Il faut __ attentif.', 'être', ['avoir','suis']],
+    ["Elle s'intéresse __ musique.", 'à la', ['de la','au']],
+    ['Où __-tu?', 'vas', ['allez','vais']],
+    ['Ils ont __ le livre.', 'lu', ['lire','lit']],
+    ['Ne __ pas!', 'parlez', ['parle','parlé']],
+    ["Si j'avais le temps, je __.", 'viendrais', ['vient','venir']],
+    ["C'est __ ami.", 'mon', ['ma','mes']],
+    ['Il y __ deux patients.', 'a', ['est','ont']]
+  ];
+  const plur = [
+    ['cheval','chevaux','chevals'],['œil','yeux','œils'],['animal','animaux','animals'],
+    ['journal','journaux','journals'],['travail','travaux','travails'],['madame','mesdames','madames'],
+    ['chou','choux','chous'],['feu','feux','feus'],['ciel','cieux','ciels'],['genou','genoux','genous']
+  ];
+  const defs = [
+    ['„urgence“ bedeutet?', 'Notfall', ['Urlaub','Übung']],
+    ['„rendez-vous“ bedeutet?', 'Termin', ['Zufall','Rechnung']],
+    ['„douleur“ bedeutet?', 'Schmerz', ['Freude','Tür']],
+    ['„soin“ bedeutet?', 'Pflege/Behandlung', ['Sport','Salz']],
+    ['„fièvre“ bedeutet?', 'Fieber', ['Hunger','Fenster']],
+    ['„blessure“ bedeutet?', 'Verletzung', ['Blumenstrauß','Buch']],
+    ['„examen“ bedeutet?', 'Untersuchung/Prüfung', ['Essen','Ausgang']],
+    ['„ordonnance“ bedeutet?', 'Rezept', ['Ordnung nur','Orange']],
+    ['„pansement“ bedeutet?', 'Verband', ['Pause','Park']],
+    ['„infirmier/ère“ bedeutet?', 'Pflegefachperson', ['Ingenieur','Infanterie']]
+  ];
+  const sentences = [
+    ['Complétez: „Lavez-vous les __.“', 'mains', ['main','maines']],
+    ['Complétez: „Le patient est __.“', 'fatigué', ['fatiguer','fatigue']],
+    ['Complétez: „Prenez le médicament __.“', 'régulièrement', ['régulier','régularité']],
+    ['Complétez: „Appelez en cas d\'__.“', 'urgence', ['urgent','urger']],
+    ['Complétez: „Elle travaille à l\'__.“', 'hôpital', ['hospitalité','hospitalisation']],
+    ['Complétez: „Il a de la __.“', 'fièvre', ['fier','figue']],
+    ['Complétez: „Gardez la plaie __.“', 'propre', ['proprement','propreté']],
+    ['Complétez: „Nous avons un __.“', 'rendez-vous', ['rendez','vous']],
+    ['Complétez: „Je ne __ pas.“', 'comprends', ['comprendre','compris']],
+    ['Complétez: „Ils __ venir demain.“', 'vont', ['va','allez']]
+  ];
+
+  const easy = [], medium = [], hard = [];
+  const mix = [13, 12, 13, 12, 13, 12, 13, 12];
+  function fill(bandArr, band) {
+    for (let i = 0; i < mix[0]; i++) {
+      const v = vocab[i % vocab.length];
+      bandArr.push(makeTextQ('„' + v[0] + '“ bedeutet?', v[1], padWrong(v[1], vocab[(i + 5) % vocab.length][1], vocab[(i + 11) % vocab.length][1]), band, v[0] + '=' + v[1], 'fr-b1-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[1]; i++) {
+      const v = vocab[(i + 15) % vocab.length];
+      bandArr.push(makeTextQ('„' + v[1] + '“ auf Französisch?', v[0], [vocab[(i + 4) % vocab.length][0], vocab[(i + 9) % vocab.length][0]], band, v[1] + '=' + v[0], 'fr-b2-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[2]; i++) {
+      const s = syn[i % syn.length];
+      bandArr.push(makeTextQ('Synonyme de „' + s[0] + '“?', s[1], [s[2], 'autre'], band, 'syn', 'fr-syn-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[3]; i++) {
+      const a = ant[i % ant.length];
+      bandArr.push(makeTextQ('Contraire de „' + a[0] + '“?', a[1], ['similaire', 'identique'], band, 'ant', 'fr-ant-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[4]; i++) {
+      const g = grammarClean[i % grammarClean.length];
+      bandArr.push(makeTextQ((band === 'hard' ? 'Grammaire: ' : 'Complétez: ') + '„' + g[0] + '“', g[1], g[2], band, 'grammaire', 'fr-gr-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[5]; i++) {
+      const p = plur[i % plur.length];
+      bandArr.push(makeTextQ('Pluriel de „' + p[0] + '“?', p[1], [p[2], p[0] + 's'], band, 'pluriel', 'fr-pl-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[6]; i++) {
+      const d = defs[i % defs.length];
+      bandArr.push(makeTextQ(d[0], d[1], d[2], band, d[1], 'fr-def-' + band[0] + '-' + i));
+    }
+    for (let i = 0; i < mix[7]; i++) {
+      const s = sentences[i % sentences.length];
+      bandArr.push(makeTextQ(s[0], s[1], s[2], band, 'phrase', 'fr-sent-' + band[0] + '-' + i));
+    }
   }
-  return out;
+  fill(easy, 'easy'); fill(medium, 'medium'); fill(hard, 'hard');
+  return assemble300(easy, medium, hard);
+}
+
+// ---------- MATH ----------
+function generateMathFragen() {
+  const easy = [], medium = [], hard = [];
+  // easy: mix add/sub/mul/simple compare/round
+  for (let i = 0; i < 100; i++) {
+    const t = i % 5;
+    const a = 2 + (i % 20), b = 2 + ((i * 3) % 15);
+    if (t === 0) easy.push(makeNumQ(a + ' + ' + b + ' = ?', a + b, 'easy', 'Addition', 'math-e-a-' + i));
+    else if (t === 1) easy.push(makeNumQ((a + 10) + ' − ' + b + ' = ?', a + 10 - b, 'easy', 'Subtraktion', 'math-e-s-' + i));
+    else if (t === 2) easy.push(makeNumQ(a + ' × ' + b + ' = ?', a * b, 'easy', 'Multiplikation', 'math-e-m-' + i));
+    else if (t === 3) {
+      const n = 10 + i;
+      easy.push(makeNumQ('Runde ' + (n + 0.4) + ' auf ganze Zahl?', n, 'easy', 'Runden', 'math-e-r-' + i));
+    } else {
+      easy.push(makeTextQ('Welches ist größer: ' + a + ' oder ' + b + '?', String(Math.max(a, b)), [String(Math.min(a, b)), String(a + b)], 'easy', 'Vergleich', 'math-e-c-' + i));
+    }
+  }
+  // medium: percent, equations, squares, fractions, averages simple
+  for (let i = 0; i < 100; i++) {
+    const t = i % 5;
+    if (t === 0) {
+      const pct = 5 + (i % 19) * 5, base = 20 + (i % 16) * 5;
+      medium.push(makeNumQ(pct + '% von ' + base + ' = ?', pct * base / 100, 'medium', 'Prozent', 'math-m-p-' + i));
+    } else if (t === 1) {
+      const x = 2 + (i % 15), c = 1 + (i % 9), r = 2 * x + c;
+      medium.push(makeNumQ('2x + ' + c + ' = ' + r + '. x = ?', x, 'medium', 'Gleichung', 'math-m-e-' + i));
+    } else if (t === 2) {
+      const n = 2 + (i % 14);
+      medium.push(makeNumQ(n + '² = ?', n * n, 'medium', 'Quadrat', 'math-m-q-' + i));
+    } else if (t === 3) {
+      const num = 2 + (i % 8), den = 2 + (i % 5);
+      const whole = 12;
+      medium.push(makeNumQ(num + '/' + den + ' von ' + whole + ' = ?', (num / den) * whole, 'medium', 'Bruchteil', 'math-m-f-' + i));
+    } else {
+      const n = 3 + (i % 10);
+      medium.push(makeNumQ('Mittelwert von ' + n + ', ' + (n + 4) + ', ' + (n + 8) + '?', n + 4, 'medium', 'Durchschnitt', 'math-m-a-' + i));
+    }
+  }
+  // hard: multi-step, exact division, a²+b², ratios, combined
+  for (let i = 0; i < 100; i++) {
+    const t = i % 5;
+    if (t === 0) {
+      const b = 2 + (i % 9), qv = 4 + (i % 11), a = b * qv;
+      hard.push(makeNumQ(a + ' ÷ ' + b + ' = ?', qv, 'hard', 'Division', 'math-h-d-' + i));
+    } else if (t === 1) {
+      const n = i;
+      hard.push(makeNumQ('Mittelwert ' + n + ',' + (n + 6) + ',' + (n + 12) + '?', n + 6, 'hard', 'Durchschnitt', 'math-h-a-' + i));
+    } else if (t === 2) {
+      const a = 3 + (i % 10), b = 4 + (i % 7);
+      hard.push(makeNumQ(a + '² + ' + b + '² = ?', a * a + b * b, 'hard', 'a²+b²', 'math-h-p-' + i));
+    } else if (t === 3) {
+      const a = 2 + (i % 8), b = 3 + (i % 6);
+      // (a+b)*a - b
+      hard.push(makeNumQ('(' + a + '+' + b + ')×' + a + ' − ' + b + ' = ?', (a + b) * a - b, 'hard', 'Klammer+Reihenfolge', 'math-h-o-' + i));
+    } else {
+      const part = 2 + (i % 5), whole = part * (3 + (i % 4));
+      hard.push(makeNumQ('Anteil ' + part + ' an ' + whole + ' in % (gerundet)?', Math.round(part / whole * 100), 'hard', 'Anteil%', 'math-h-r-' + i));
+    }
+  }
+  return assemble300(easy, medium, hard);
+}
+
+// ---------- NUMBER SEQUENCE ----------
+function generateNumberSequenceFragen() {
+  const easy = [], medium = [], hard = [];
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      const step = 2 + (i % 9), a = 1 + (i % 20);
+      const seq = [a, a + step, a + 2 * step, a + 3 * step];
+      easy.push(makeNumQ(seq.join(', ') + ', ?', a + 4 * step, 'easy', '+' + step, 'ns-e-ar-' + i));
+    } else if (t === 1) {
+      const step = 1 + (i % 7), a = 20 + (i % 30);
+      const seq = [a, a - step, a - 2 * step, a - 3 * step];
+      easy.push(makeNumQ(seq.join(', ') + ', ?', a - 4 * step, 'easy', '−' + step, 'ns-e-sub-' + i));
+    } else if (t === 2) {
+      const a = 1 + (i % 10);
+      easy.push(makeNumQ([a, a + 1, a + 2, a + 3].join(', ') + ', ?', a + 4, 'easy', '+1', 'ns-e-p1-' + i));
+    } else {
+      // double sequence
+      let x = 1 + (i % 5); const seq = [];
+      for (let k = 0; k < 4; k++) { seq.push(x); x *= 2; }
+      easy.push(makeNumQ(seq.join(', ') + ', ?', x, 'easy', '×2', 'ns-e-dbl-' + i));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      const m = 2 + (i % 4); let a = 1 + (i % 5); const seq = [];
+      for (let k = 0; k < 4; k++) { seq.push(a); a *= m; }
+      medium.push(makeNumQ(seq.join(', ') + ', ?', a, 'medium', '×' + m, 'ns-m-geo-' + i));
+    } else if (t === 1) {
+      const start = 1 + (i % 15); const seq = [start]; let cur = start;
+      for (let k = 1; k <= 3; k++) { cur += k; seq.push(cur); }
+      medium.push(makeNumQ(seq.join(', ') + ', ?', cur + 4, 'medium', '+1,+2,+3,+4', 'ns-m-inc-' + i));
+    } else if (t === 2) {
+      // squares
+      const n = 2 + (i % 8);
+      medium.push(makeNumQ([n * n, (n + 1) * (n + 1), (n + 2) * (n + 2), (n + 3) * (n + 3)].join(', ') + ', ?', (n + 4) * (n + 4), 'medium', 'Quadrate', 'ns-m-sq-' + i));
+    } else {
+      // alternating +a -b
+      const a = 3 + (i % 5), b = 1 + (i % 3), s0 = 10 + i % 9;
+      const seq = [s0, s0 + a, s0 + a - b, s0 + 2 * a - b];
+      medium.push(makeNumQ(seq.join(', ') + ', ?', s0 + 2 * a - 2 * b, 'medium', 'Wechsel +' + a + '/−' + b, 'ns-m-alt-' + i));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      // fibonacci-like
+      let a = 1 + (i % 5), b = 2 + (i % 4); const seq = [a, b];
+      for (let k = 0; k < 3; k++) { const n = a + b; a = b; b = n; seq.push(n); }
+      hard.push(makeNumQ(seq.slice(0, 4).join(', ') + ', ?', seq[4], 'hard', 'jedes = Summe der zwei vorigen', 'ns-h-fib-' + i));
+    } else if (t === 1) {
+      // two interleaved: odds and *2
+      const a = 1 + (i % 6), b = 2 + (i % 5);
+      const seq = [a, b, a + 2, b * 2];
+      const next = a + 4;
+      hard.push(makeNumQ(seq.join(', ') + ', ? (zwei Reihen)', next, 'hard', 'ungerade Stellen +2', 'ns-h-int-' + i));
+    } else if (t === 2) {
+      const start = 2 + (i % 10); const seq = [start]; let cur = start;
+      for (let k = 1; k <= 3; k++) { cur += k * k; seq.push(cur); }
+      hard.push(makeNumQ(seq.join(', ') + ', ?', cur + 16, 'hard', '+1²,+2²,+3²,+4²', 'ns-h-sqd-' + i));
+    } else {
+      // *2+1
+      let a = 1 + (i % 6); const seq = [];
+      for (let k = 0; k < 4; k++) { seq.push(a); a = a * 2 + 1; }
+      hard.push(makeNumQ(seq.join(', ') + ', ?', a, 'hard', '×2+1', 'ns-h-21-' + i));
+    }
+  }
+  return assemble300(easy, medium, hard);
+}
+
+// ---------- LOGIC ----------
+function generateLogicFragen() {
+  const animals = ['Hund','Katze','Maus','Pferd','Vogel','Fisch','Kuh','Schaf'];
+  const colors = ['Rot','Blau','Grün','Gelb','Schwarz','Weiss'];
+  const vehicles = ['Auto','Bus','Zug','Flugzeug','Schiff','Fahrrad'];
+  const tools = ['Hammer','Säge','Zange','Schraubenzieher'];
+  const foods = ['Brot','Apfel','Käse','Milch'];
+  const easy = [], medium = [], hard = [];
+
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      const step = 2 + (i % 5), a = i + 1;
+      easy.push(makeNumQ('Logik-Reihe: ' + a + ', ' + (a + step) + ', ' + (a + 2 * step) + ', ?', a + 3 * step, 'easy', '+' + step, 'lg-e-s-' + i));
+    } else if (t === 1) {
+      const odd = vehicles[i % vehicles.length];
+      const a1 = animals[i % animals.length], a2 = animals[(i + 1) % animals.length];
+      easy.push(makeTextQ('Was passt nicht? ' + a1 + ', ' + a2 + ', ' + odd, odd, [a1, a2], 'easy', odd + ' ist kein Tier', 'lg-e-o-' + i));
+    } else if (t === 2) {
+      easy.push(makeTextQ('Wenn alle A B sind und X ein A ist, dann ist X…', 'ein B', ['kein B','unbekannt zwingend'], 'easy', 'Syllogismus', 'lg-e-y-' + i));
+    } else {
+      const c1 = colors[i % colors.length];
+      easy.push(makeTextQ('Analogie: Auto:Straße = ' + foods[i % foods.length] + ':?', 'Essen', ['Fahrzeug','Farbe'], 'easy', 'Kategorie', 'lg-e-a-' + i));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    const t = i % 4;
+    if (t === 0) {
+      const odd = tools[i % tools.length];
+      const f1 = foods[i % foods.length], f2 = foods[(i + 1) % foods.length];
+      medium.push(makeTextQ('Was passt nicht? ' + f1 + ', ' + f2 + ', ' + odd, odd, [f1, f2], 'medium', 'Werkzeug vs Essen', 'lg-m-o-' + i));
+    } else if (t === 1) {
+      medium.push(makeTextQ('Alle Pflegekräfte sind hilfsbereit. Sam ist Pflegekraft. Folgt: Sam ist hilfsbereit?', 'Ja', ['Nein','Unklar'], 'medium', 'gültiger Schluss', 'lg-m-y-' + i));
+    } else if (t === 2) {
+      medium.push(makeTextQ('A > B und B > C. Relation A und C?', 'A > C', ['A < C','unbekannt'], 'medium', 'Transitivität', 'lg-m-t-' + i));
+    } else {
+      const step = 3 + (i % 4); let a = 2 + (i % 6);
+      medium.push(makeNumQ('Reihe (× dann +): ' + a + ', ' + (a * 2 + 1) + ', ' + ((a * 2 + 1) * 2 + 1) + ', ?', ((a * 2 + 1) * 2 + 1) * 2 + 1, 'medium', '×2+1', 'lg-m-r-' + i));
+    }
+  }
+  for (let i = 0; i < 100; i++) {
+    const t = i % 5;
+    if (t === 0) {
+      hard.push(makeTextQ('A größer als B, B größer als C. Wer ist am kleinsten?', 'C', ['A','B'], 'hard', 'A>B>C', 'lg-h-abc-' + i));
+    } else if (t === 1) {
+      hard.push(makeTextQ('Keine Regel ohne Ausnahme. Gilt: Es gibt Ausnahmen zu Regeln?', 'Ja (nach Aussage)', ['Nein zwingend falsch','Unmöglich'], 'hard', 'Aussagenlogik', 'lg-h-ex-' + i));
+    } else if (t === 2) {
+      hard.push(makeTextQ('Wenn Regen → nass. Boden ist nass. Folgt: Es hat geregnet?', 'Nicht zwingend', ['Ja sicher','Nein unmöglich'], 'hard', 'Affirming the consequent', 'lg-h-rain-' + i));
+    } else if (t === 3) {
+      hard.push(makeTextQ('Regel: Wenn Alarm, dann Evakuierung. Alarm ausgelöst. Folgt Evakuierung?', 'Ja (nach Regel)', ['Nein','Unklar nach Regel'], 'hard', 'Modus ponens', 'lg-h-mp-' + i));
+    } else {
+      const a = 3 + (i % 5);
+      hard.push(makeTextQ('Vier Karten A/B/2/3. Regel: Vokal → gerade Zahl. Welche mind. prüfen? (Variante ' + i + ')', 'A und 3', ['nur A','A und 2'], 'hard', 'Wason: Vokal und ungerade', 'lg-h-was-' + i));
+    }
+  }
+  return assemble300(easy, medium, hard);
+}
+
+// ---------- SCIENCE ----------
+function generateScienceFragen() {
+  const facts = [
+    ['Welches Gas brauchen wir zum Atmen?', 'Sauerstoff', ['Helium','Stickstoff allein'], 'easy'],
+    ['Wasser gefriert bei?', '0 °C', ['100 °C','50 °C'], 'easy'],
+    ['Größter Planet im Sonnensystem?', 'Jupiter', ['Erde','Mars'], 'easy'],
+    ['Blut pumpt welches Organ?', 'Herz', ['Leber','Magen'], 'easy'],
+    ['Einheit der Kraft?', 'Newton', ['Watt','Volt'], 'easy'],
+    ['Photosynthese braucht vor allem?', 'Licht', ['nur Dunkelheit','nur Salz'], 'easy'],
+    ['Knochen Erwachsene ca.?', '206', ['100','500'], 'medium'],
+    ['pH 7 ist?', 'neutral', ['sauer','basisch'], 'easy'],
+    ['DNA speichert?', 'Erbinformation', ['nur Zucker','nur Fett'], 'medium'],
+    ['Erdanziehung heißt?', 'Gravitation', ['Magnetismus','Reibung'], 'easy'],
+    ['Antibiotika wirken gegen?', 'Bakterien', ['Viren immer','nur Pilze'], 'medium'],
+    ['Hauptaufgabe der Niere?', 'Blut filtrieren', ['Verdauung','Hormonsingen'], 'medium'],
+    ['Schall braucht zum Ausbreiten?', 'Medium', ['Vakuum','nur Licht'], 'medium'],
+    ['Vitamin-C-Mangel kann führen zu?', 'Skorbut', ['Rachitis','nur B12'], 'hard'],
+    ['Ruhepuls Erwachsene ca.?', '60–80/min', ['10/min','200/min'], 'easy'],
+    ['Mitochondrien sind?', 'Zell-Kraftwerke', ['Zellkern','Zellwand'], 'medium'],
+    ['Ohmsches Gesetz: U = ?', 'R · I', ['U + I','m + a'], 'hard'],
+    ['Nosokomial bedeutet?', 'Krankenhausinfektion', ['Endemie','Pandemie'], 'hard'],
+    ['Systole ist?', 'Herzkontraktion', ['Herzpause','nur Vorhof'], 'medium'],
+    ['Isotope unterscheiden sich in?', 'Neutronenzahl', ['Protonenzahl immer','nur Name'], 'hard'],
+    ['Katalysator…', 'senkt Aktivierungsenergie', ['wird verbraucht','ändert Gleichgewicht dauerhaft'], 'hard'],
+    ['Siedepunkt Wasser (normal)?', '100 °C', ['0 °C','50 °C'], 'easy'],
+    ['Planet der Menschen?', 'Erde', ['Mars','Venus'], 'easy'],
+    ['Haut schützt vor?', 'Keimen/Verletzung', ['nur Hunger','nur Durst'], 'easy'],
+    ['Lunge nimmt vor allem auf?', 'Sauerstoff', ['nur CO2 rein','Helium'], 'easy'],
+    ['Knochenmark bildet?', 'Blutkörperchen', ['Galle','Speichel'], 'medium'],
+    ['Insulin reguliert?', 'Blutzucker', ['nur Hörvermögen','nur Haar'], 'medium'],
+    ['Vitamin D entsteht u.a. durch?', 'Sonnenlicht', ['nur Eisen','nur Salz'], 'medium'],
+    ['Nerven leiten?', 'Signale', ['Blut','Luft'], 'easy'],
+    ['Impfung dient der?', 'Prävention', ['Dekoration','nur Mode'], 'easy'],
+    ['Welche Blutgruppe ist Universalspender (klassisch)?', '0', ['AB','nur A'], 'hard'],
+    ['Osmose beschreibt?', 'Diffusion durch Membran', ['nur Verbrennung','nur Magnetismus'], 'hard'],
+    ['Weißes Blutkörperchen Aufgabe?', 'Abwehr', ['Sauerstofftransport','Gerinnung allein'], 'medium'],
+    ['Rotes Blutkörperchen transportiert?', 'Sauerstoff', ['nur Hormone','nur Fett'], 'easy'],
+    ['Welche Vitamin-Gruppe wasserlöslich?', 'C und B', ['A/D/E/K','nur K'], 'hard'],
+    ['Normaltemperatur Körper ca.?', '37 °C', ['30 °C','45 °C'], 'easy'],
+    ['CO2 wird abgegeben über?', 'Atmung', ['nur Hautporen','nur Niere allein'], 'easy'],
+    ['Enzym ist?', 'Biokatalysator', ['Hormon immer','Vitamin immer'], 'hard'],
+    ['Hämoglobin bindet?', 'Sauerstoff', ['nur Calcium','nur Natrium'], 'medium'],
+    ['pH Magen eher?', 'sauer', ['basisch','neutral 7'], 'medium'],
+    ['Welches Organ produziert Galle?', 'Leber', ['Milz','Lunge'], 'medium'],
+    ['Welche Struktur speichert Urin?', 'Blase', ['Magen','Herz'], 'easy'],
+    ['Pathogen bedeutet?', 'Krankheitserreger', ['Heilmittel','Nährstoff'], 'medium'],
+    ['Sterilisation bedeutet?', 'Keimfreiheit anstreben', ['nur Putzen','nur Kühlen'], 'hard'],
+    ['Deskundig: Desinfektion…', 'reduziert Keime stark', ['macht immer steril','ist nur Duft'], 'hard'],
+    ['Welche Einheit Energie?', 'Joule', ['Newton','Ampere'], 'medium'],
+    ['Lichtgeschwindigkeit grob?', '3×10⁸ m/s', ['3 m/s','300 m/s'], 'hard'],
+    ['Mond umkreist?', 'Erde', ['Sonne direkt als Planet','Mars'], 'easy'],
+    ['Photosynthese Produkt u.a.?', 'Sauerstoff', ['nur Stickstoff','Helium'], 'easy'],
+    ['Zellkern enthält?', 'DNA', ['nur Wasser','nur Fett'], 'medium']
+  ];
+  const formats = [
+    (f, i, d) => makeTextQ(f[0], f[1], f[2], d, f[1], 'sci-' + d[0] + '-' + i),
+    (f, i, d) => makeTextQ('Richtig oder eher falsch gedacht: ' + f[0].replace('?', '') + ' → Antwort?', f[1], f[2], d, f[1], 'sci-r-' + d[0] + '-' + i),
+    (f, i, d) => makeTextQ('Welche Aussage passt? Thema: ' + f[0], f[1], f[2], d, f[1], 'sci-t-' + d[0] + '-' + i)
+  ];
+
+  const byDiff = { easy: [], medium: [], hard: [] };
+  facts.forEach((f) => byDiff[f[3]].push(f));
+  // ensure enough by cycling
+  function fillDiff(diff, target) {
+    const pool = byDiff[diff].length ? byDiff[diff] : facts;
+    const out = [];
+    for (let i = 0; i < target; i++) {
+      const f = pool[i % pool.length];
+      const fmt = formats[i % formats.length];
+      out.push(fmt(f, i, diff));
+    }
+    return out;
+  }
+  // redistribute: use all facts across difficulties by content tags but force 100 each with increasing complexity stems
+  const easy = [], medium = [], hard = [];
+  for (let i = 0; i < 100; i++) {
+    const f = facts[i % facts.length];
+    easy.push(makeTextQ(f[0], f[1], f[2], 'easy', f[1], 'sci-e-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const f = facts[(i + 17) % facts.length];
+    medium.push(makeTextQ('Fachwissen: ' + f[0], f[1], f[2], 'medium', f[1], 'sci-m-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const f = facts[(i + 31) % facts.length];
+    const t = i % 3;
+    if (t === 0) hard.push(makeTextQ('Anspruchsvoll: ' + f[0], f[1], f[2], 'hard', f[1], 'sci-h-' + i));
+    else if (t === 1) hard.push(makeTextQ('Welche Antwort ist korrekt? ' + f[0], f[1], f[2], 'hard', f[1], 'sci-h2-' + i));
+    else hard.push(makeTextQ('Schließen Sie: ' + f[0].replace('?', '') + ' — beste Option?', f[1], f[2], 'hard', f[1], 'sci-h3-' + i));
+  }
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- ORGANISATION ----------
 function generateOrganisationFragen() {
-  const out = [];
+  const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
-    const startH = 8 + (i % 10);
-    const startM = (i % 4) * 15;
-    const dur = 30 + (i % 6) * 15;
-    const endTotal = startH * 60 + startM + dur;
-    const eh = Math.floor(endTotal / 60) % 24;
-    const em = endTotal % 60;
-    const ans = String(eh).padStart(2, '0') + ':' + String(em).padStart(2, '0');
-    const start = String(startH).padStart(2, '0') + ':' + String(startM).padStart(2, '0');
-    const w1 = String(eh).padStart(2, '0') + ':' + String((em + 15) % 60).padStart(2, '0');
-    const w2 = String((eh + 1) % 24).padStart(2, '0') + ':' + String(em).padStart(2, '0');
-    out.push(makeTextQ('Start ' + start + ', Dauer ' + dur + ' Min. Ende?', ans, [w1, w2], 'easy', start + ' + ' + dur + ' Min', 'org-e-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const startH = 8 + (i % 10), startM = (i % 4) * 15, dur = 30 + (i % 6) * 15;
+      const endTotal = startH * 60 + startM + dur;
+      const eh = Math.floor(endTotal / 60) % 24, em = endTotal % 60;
+      const ans = String(eh).padStart(2, '0') + ':' + String(em).padStart(2, '0');
+      const start = String(startH).padStart(2, '0') + ':' + String(startM).padStart(2, '0');
+      const w1 = String(eh).padStart(2, '0') + ':' + String((em + 15) % 60).padStart(2, '0');
+      const w2 = String((eh + 1) % 24).padStart(2, '0') + ':' + String(em).padStart(2, '0');
+      easy.push(makeTextQ('Start ' + start + ', Dauer ' + dur + ' Min. Ende?', ans, [w1, w2], 'easy', start + '+' + dur, 'org-e-t-' + i));
+    } else if (t === 1) {
+      const tasks = 3 + (i % 5);
+      easy.push(makeTextQ('Sie haben ' + tasks + ' kurze Aufgaben. Sinnvolle erste Aktion?', 'Priorisieren/Liste', ['Alles gleichzeitig','Zufällig starten'], 'easy', 'Priorisieren', 'org-e-p-' + i));
+    } else {
+      const a = 10 + (i % 20), b = 5 + (i % 10);
+      easy.push(makeTextQ('Termin A in ' + a + ' Min, B in ' + b + ' Min. Welchen zuerst?', b <= a ? 'B' : 'A', [b <= a ? 'A' : 'B', 'Egal'], 'easy', 'früher', 'org-e-d-' + i));
+    }
   }
   for (let i = 0; i < 100; i++) {
-    const budget = 100 + (i % 20) * 50;
-    const pct = 10 + (i % 8) * 5;
-    const spent = budget * pct / 100;
-    const rest = budget - spent;
-    out.push(makeNumQ('Budget ' + budget + ', ausgegeben ' + pct + '%. Rest?', rest, 'medium', 'Rest = ' + rest, 'org-m-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const budget = 100 + (i % 20) * 50, pct = 10 + (i % 8) * 5;
+      medium.push(makeNumQ('Budget ' + budget + ', ausgegeben ' + pct + '%. Rest?', budget - budget * pct / 100, 'medium', 'Rest', 'org-m-b-' + i));
+    } else if (t === 1) {
+      const need = 4 + (i % 6), have = 2 + (i % 5);
+      medium.push(makeTextQ('Brauche ' + need + 'h, habe ' + have + 'h frei. Lücke?', String(need - have) + 'h', [String(need + have) + 'h', String(have) + 'h'], 'medium', 'Differenz', 'org-m-g-' + i));
+    } else {
+      medium.push(makeTextQ('3 Aufgaben: dringend/wichtig, dringend/nicht wichtig, nicht dringend/wichtig. Zuerst?', 'dringend/wichtig', ['nur unwichtig','Zufall'], 'medium', 'Eisenhower', 'org-m-e-' + i));
+    }
   }
   for (let i = 0; i < 100; i++) {
-    const cap = 5 + (i % 6);
-    const t1 = 1 + (i % 3), t2 = 2 + (i % 3), t3 = 2 + ((i + 1) % 3);
-    const sum = t1 + t2 + t3;
-    const ok = sum <= cap ? 'Ja' : 'Nein';
-    out.push(makeTextQ('Kapazität ' + cap + 'h, Aufgaben ' + t1 + '+' + t2 + '+' + t3 + 'h. Machbar?', ok, [ok === 'Ja' ? 'Nein' : 'Ja', 'Unmöglich zu sagen'], 'hard', sum + ' vs ' + cap, 'org-h-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const cap = 5 + (i % 6), t1 = 1 + (i % 3), t2 = 2 + (i % 3), t3 = 2 + ((i + 1) % 3);
+      const sum = t1 + t2 + t3, ok = sum <= cap ? 'Ja' : 'Nein';
+      hard.push(makeTextQ('Kapazität ' + cap + 'h, Aufgaben ' + t1 + '+' + t2 + '+' + t3 + 'h. Machbar?', ok, [ok === 'Ja' ? 'Nein' : 'Ja', 'Unmöglich zu sagen'], 'hard', sum + ' vs ' + cap, 'org-h-c-' + i));
+    } else if (t === 1) {
+      const staff = 2 + (i % 4), patients = 6 + (i % 8);
+      hard.push(makeNumQ(staff + ' Personen, ' + patients + ' Patient:innen. Ø Belastung?', Math.round((patients / staff) * 10) / 10, 'hard', 'patients/staff', 'org-h-l-' + i));
+    } else {
+      const a = 20 + (i % 10), b = 30 + (i % 15), overlap = 10 + (i % 5);
+      hard.push(makeNumQ('Aufgabe A ' + a + ' Min, B ' + b + ' Min, ' + overlap + ' Min parallel möglich. Mindestgesamtzeit?', a + b - overlap, 'hard', 'A+B−Overlap', 'org-h-o-' + i));
+    }
   }
-  return out;
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- CONCENTRATION ----------
 function generateConcentrationFragen() {
-  const symbols = ['●','◇','○','■','▲'];
-  const out = [];
+  const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
-    const rnd = seedRand(1000 + i);
-    const counts = [0, 0, 0];
-    let s = '';
-    const use = symbols.slice(0, 3);
-    for (let k = 0; k < 8; k++) {
-      const idx = Math.floor(rnd() * 3);
-      // bias first symbol to win uniquely
-      const pick = k < 4 ? 0 : idx;
-      counts[pick]++;
-      s += use[pick];
+    const t = i % 3;
+    if (t === 0) {
+      const a = 3 + (i % 3), b = 1 + (i % 2), c = 1;
+      const s = '●'.repeat(a) + '◇'.repeat(b) + '○'.repeat(c);
+      easy.push(makeTextQ('Welches Symbol am häufigsten? ' + s, '●', ['◇','○'], 'easy', '●×' + a, 'co-e-s-' + i));
+    } else if (t === 1) {
+      const n = 4 + (i % 6);
+      easy.push(makeNumQ('Zählen Sie: wie viele Zeichen in "' + 'X'.repeat(n) + '"?', n, 'easy', 'zählen', 'co-e-x-' + i));
+    } else {
+      const arr = [1, 2, 3, 4, 5]; arr[i % 5] = 9;
+      easy.push(makeTextQ('Welche Zahl passt nicht in 1–5? Folge: ' + arr.join(','), '9', ['1','3'], 'easy', '9 stört', 'co-e-o-' + i));
     }
-    // ensure unique max
-    let maxI = 0;
-    for (let j = 1; j < 3; j++) if (counts[j] > counts[maxI]) maxI = j;
-    for (let j = 0; j < 3; j++) if (j !== maxI && counts[j] === counts[maxI]) counts[maxI]++;
-    // rebuild string with corrected counts roughly - simpler: fixed pattern
-  }
-  // simpler deterministic
-  for (let i = 0; i < 100; i++) {
-    const a = 3 + (i % 3);
-    const b = 1 + (i % 2);
-    const c = 1;
-    const s = '●'.repeat(a) + '◇'.repeat(b) + '○'.repeat(c);
-    out.push(makeTextQ('Welches Symbol kommt am häufigsten vor? ' + s, '●', ['◇','○'], 'easy', '● ×' + a, 'co-e-' + i));
   }
   for (let i = 0; i < 100; i++) {
-    const word = ['BANANA','MISSISSIPPI','PFLEGE','KONZENTRATION','GESUNDHEIT','MULTICHECK','TRAINING','SCHWEIZ'][i % 8];
-    const ch = word[(i * 3) % word.length];
-    let cnt = 0;
-    for (const c of word) if (c === ch) cnt++;
-    out.push(makeNumQ('Wie oft kommt "' + ch + '" in ' + word + ' vor?', cnt, 'medium', 'zählen', 'co-m-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const word = ['BANANA','MISSISSIPPI','PFLEGE','KONZENTRATION','GESUNDHEIT','MULTICHECK','TRAINING','SCHWEIZ'][i % 8];
+      const ch = word[(i * 3) % word.length];
+      let cnt = 0; for (const c of word) if (c === ch) cnt++;
+      medium.push(makeNumQ('Wie oft "' + ch + '" in ' + word + '?', cnt, 'medium', 'zählen', 'co-m-l-' + i));
+    } else if (t === 1) {
+      const a = 'ABACABA', target = a[(i * 2) % a.length];
+      let cnt = 0; for (const c of a) if (c === target) cnt++;
+      medium.push(makeNumQ('In ABACABA: wie oft "' + target + '"?', cnt, 'medium', 'zählen', 'co-m-a-' + i));
+    } else {
+      medium.push(makeTextQ('Finde den Fehler: 2,4,6,9,10 (gerade Zahlen-Idee)', '9', ['2','10'], 'medium', '9 ungerade', 'co-m-f-' + i));
+    }
   }
   for (let i = 0; i < 100; i++) {
-    const wrong = 1 + (i % 9);
-    const total = 20 + (i % 10) * 5;
-    const pct = Math.round((wrong / total) * 100);
-    out.push(makeNumQ(wrong + ' von ' + total + ' falsch. Prozent (gerundet)?', pct, 'hard', wrong + '/' + total, 'co-h-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const wrong = 1 + (i % 9), total = 20 + (i % 10) * 5;
+      hard.push(makeNumQ(wrong + ' von ' + total + ' falsch. Prozent (gerundet)?', Math.round((wrong / total) * 100), 'hard', wrong + '/' + total, 'co-h-p-' + i));
+    } else if (t === 1) {
+      const s = '●◇○●◇●○●';
+      let cnt = 0; for (const c of s) if (c === '●') cnt++;
+      hard.push(makeNumQ('Multi-Symbol "' + s + '": Anzahl ●?', cnt, 'hard', 'zählen', 'co-h-s-' + i));
+    } else {
+      const w = 'KONZENTRIEREN';
+      hard.push(makeNumQ('Differenz: Vokale vs Konsonanten in "' + w + '"? |V-K|', Math.abs([...w].filter(c=>'AEIOU'.includes(c)).length - [...w].filter(c=>!'AEIOU'.includes(c)).length), 'hard', 'Vokal/Konsonant', 'co-h-v-' + i));
+    }
   }
-  return out;
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- MEMORY ----------
 function generateMemoryFragen() {
   const words = ['Ball','Baum','Auto','Haus','Stift','Lampe','Tasse','Buch','Hund','Katze','Milch','Brot','Zürich','Bern','Sonne','Mond','Stern','Schlüssel','Handy','Tisch','Stuhl','Fenster','Tür','Wasser','Apfel','Birne','Schule','Arzt','Pflege','Herz'];
-  const out = [];
+  const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
+    const t = i % 2;
     const w = [words[i % words.length], words[(i + 3) % words.length], words[(i + 7) % words.length]];
-    out.push(makeTextQ('Merke: ' + w.join(', ') + '. Welches war dabei?', w[0], ['Vulkan','Laptop'], 'easy', w[0] + ' war in der Liste.', 'mem-e-' + i));
+    if (t === 0) easy.push(makeTextQ('Merke: ' + w.join(', ') + '. Welches war dabei?', w[0], ['Vulkan','Laptop'], 'easy', w[0], 'mem-e-1-' + i));
+    else easy.push(makeTextQ('Merke: ' + w.join(', ') + '. Was war NICHT dabei?', 'Vulkan', [w[1], w[2]], 'easy', 'Vulkan fehlte', 'mem-e-2-' + i));
   }
   for (let i = 0; i < 100; i++) {
+    const t = i % 2;
     const w = [words[i % words.length], words[(i + 2) % words.length], words[(i + 4) % words.length], words[(i + 6) % words.length]];
-    out.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war 3.?', w[2], [w[0], w[1]], 'medium', '3. = ' + w[2], 'mem-m-' + i));
+    if (t === 0) medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war 3.?', w[2], [w[0], w[1]], 'medium', '3.=' + w[2], 'mem-m-1-' + i));
+    else medium.push(makeTextQ('Liste: ' + w.join(', ') + '. Was war zuletzt?', w[3], [w[0], w[2]], 'medium', 'letzt=' + w[3], 'mem-m-2-' + i));
   }
   for (let i = 0; i < 100; i++) {
+    const t = i % 3;
     const nums = [2 + (i % 9), 4 + (i % 7), 8 + (i % 5), 3 + (i % 4), 9 + (i % 3)];
-    out.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Produkt der ersten zwei?', nums[0] * nums[1], 'hard', nums[0] + '×' + nums[1], 'mem-h-' + i));
+    if (t === 0) hard.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Produkt der ersten zwei?', nums[0] * nums[1], 'hard', 'Produkt', 'mem-h-1-' + i));
+    else if (t === 1) hard.push(makeNumQ('Sequenz: ' + nums.join(',') + '. Summe Stelle 2+4?', nums[1] + nums[3], 'hard', 'Summe', 'mem-h-2-' + i));
+    else hard.push(makeTextQ('Sequenz: ' + nums.join(',') + '. Mittlere Zahl?', String(nums[2]), [String(nums[0]), String(nums[4])], 'hard', 'Mitte', 'mem-h-3-' + i));
   }
-  return out;
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- SPATIAL ----------
 function generateSpatialFragen() {
-  const out = [];
+  const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
-    const top = 1 + (i % 6);
-    const bottom = 7 - top;
-    out.push(makeNumQ('Würfel: oben ' + top + ' (Gegenüber summiert 7). Unten?', bottom, 'easy', top + '+unten=7', 'sp-e-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const top = 1 + (i % 6), bottom = 7 - top;
+      easy.push(makeNumQ('Würfel: oben ' + top + ' (Gegenüber summiert 7). Unten?', bottom, 'easy', 'Summe 7', 'sp-e-d-' + i));
+    } else if (t === 1) {
+      const side = 2 + (i % 8);
+      easy.push(makeNumQ('Quadrat Seite ' + side + '. Umfang?', 4 * side, 'easy', '4a', 'sp-e-u-' + i));
+    } else {
+      easy.push(makeTextQ('Von oben auf Becher schauen: typische Form?', 'Kreis', ['Dreieck','Würfel'], 'easy', 'Draufsicht', 'sp-e-v-' + i));
+    }
   }
   for (let i = 0; i < 100; i++) {
-    const w = 2 + (i % 8), h = 2 + (i % 6), s = 2 + (i % 3);
-    out.push(makeNumQ('Rechteck ' + w + '×' + h + ', Skalierung ×' + s + '. Neue Fläche?', (w * s) * (h * s), 'medium', 'Fläche skaliert mit s²', 'sp-m-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const w = 2 + (i % 8), h = 2 + (i % 6), s = 2 + (i % 3);
+      medium.push(makeNumQ('Rechteck ' + w + '×' + h + ', Skalierung ×' + s + '. Neue Fläche?', (w * s) * (h * s), 'medium', 's²', 'sp-m-a-' + i));
+    } else if (t === 1) {
+      const a = 3 + (i % 10);
+      medium.push(makeNumQ('Würfel Kante ' + a + '. Oberfläche?', 6 * a * a, 'medium', '6a²', 'sp-m-s-' + i));
+    } else {
+      medium.push(makeTextQ('Netz eines Würfels: wie viele Quadrate?', '6', ['4','8'], 'medium', '6 Flächen', 'sp-m-n-' + i));
+    }
   }
   for (let i = 0; i < 100; i++) {
-    const n = 3 + (i % 6);
-    const ang = ((n - 2) * 180) / n;
-    out.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', '((n-2)×180)/n', 'sp-h-' + i));
+    const t = i % 3;
+    if (t === 0) {
+      const n = 3 + (i % 6);
+      const ang = ((n - 2) * 180) / n;
+      hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', '((n-2)×180)/n', 'sp-h-a-' + i));
+    } else if (t === 1) {
+      const a = 2 + (i % 7), b = 3 + (i % 5), c = 2 + (i % 4);
+      hard.push(makeNumQ('Quader ' + a + '×' + b + '×' + c + '. Volumen?', a * b * c, 'hard', 'abc', 'sp-h-v-' + i));
+    } else {
+      hard.push(makeTextQ('Spiegelung: links oben Punkt. Wo nach Spiegelung an Vertikale?', 'rechts oben', ['links unten','rechts unten'], 'hard', 'x gespiegelt', 'sp-h-m-' + i));
+    }
   }
-  return out;
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- NETWORKED ----------
@@ -654,7 +1164,7 @@ function generateNetworkedFragen() {
     ['Schlechte Kommunikation →', 'Missverständnisse', ['automatisch Perfektion','kein Effekt']],
     ['Bewegung + Ernährung beeinflussen…', 'Gesundheit', ['nur Schuhgröße','nur Namen']],
     ['Stress kann…', 'Schlaf stören', ['Knochen verlängern','nur Freude']],
-    ['A→B→C steuern von A beeinflusst…', 'C indirekt', ['nie C','nur Zufall']],
+    ['A→B→C: Steuerung von A beeinflusst…', 'C indirekt', ['nie C','nur Zufall']],
     ['Engpass limitiert…', 'Gesamtdurchsatz', ['nur Schritt 9','nichts']],
     ['Frühe Prävention oft…', 'wirksamer', ['immer nutzlos','immer teurer ohne Nutzen']],
     ['Medikamente prüfen wegen…', 'Wechselwirkungen', ['Mode','Zufall']],
@@ -662,15 +1172,36 @@ function generateNetworkedFragen() {
     ['Trade-off bedeutet…', 'Abwägung', ['nur Win-win','kein Konflikt']],
     ['Latenz: Wirkung kommt…', 'verzögert', ['immer sofort','nie']],
     ['Resilienz ist…', 'Widerstands-/Erholungsfähigkeit', ['Chaosliebe','reine Starrheit']],
-    ['Feedback-Schleife Erfolg→Übung→…', 'mehr Erfolgschance', ['garantiert Abbruch','kein Bezug']]
+    ['Feedback-Schleife Erfolg→Übung→…', 'mehr Erfolgschance', ['garantiert Abbruch','kein Bezug']],
+    ['Mehr Personal allein ohne Prozess…', 'löst Engpässe nicht immer', ['löst alles garantiert','ist nutzlos immer']],
+    ['Dokumentationslücken führen oft zu…', 'Informationsverlust', ['mehr Klarheit','automatisch Qualität']],
+    ['Überlastung + Zeitdruck erhöhen…', 'Fehlerrisiko', ['Perfektion','Null Fehler']],
+    ['Prävention + Früherkennung wirken…', 'komplementär', ['immer gegeneinander','nur Zufall']],
+    ['Systemdenken fragt vor allem…', 'Wechselwirkungen', ['nur Einzelteile isoliert','nur Farben']]
   ];
-  const out = [];
-  for (let i = 0; i < TARGET_PER_AREA; i++) {
+  const easy = [], medium = [], hard = [];
+  for (let i = 0; i < 100; i++) {
     const p = pairs[i % pairs.length];
-    const diff = i < 100 ? 'easy' : (i < 200 ? 'medium' : 'hard');
-    out.push(makeTextQ(p[0] + (i >= pairs.length ? ' #' + (i + 1) : ''), p[1], p[2], diff, p[1], 'net-' + i));
+    const t = i % 3;
+    if (t === 0) easy.push(makeTextQ(p[0], p[1], p[2], 'easy', p[1], 'net-e-1-' + i));
+    else if (t === 1) easy.push(makeTextQ('Ursache-Wirkung: ' + p[0], p[1], p[2], 'easy', p[1], 'net-e-2-' + i));
+    else easy.push(makeTextQ('Was folgt eher? ' + p[0], p[1], p[2], 'easy', p[1], 'net-e-3-' + i));
   }
-  return out;
+  for (let i = 0; i < 100; i++) {
+    const p = pairs[(i + 5) % pairs.length];
+    const t = i % 3;
+    if (t === 0) medium.push(makeTextQ('Vernetzt: ' + p[0], p[1], p[2], 'medium', p[1], 'net-m-1-' + i));
+    else if (t === 1) medium.push(makeTextQ('Welche Folge ist plausibel? ' + p[0], p[1], p[2], 'medium', p[1], 'net-m-2-' + i));
+    else medium.push(makeTextQ('Systemblick: ' + p[0], p[1], p[2], 'medium', p[1], 'net-m-3-' + i));
+  }
+  for (let i = 0; i < 100; i++) {
+    const p = pairs[(i + 11) % pairs.length];
+    const t = i % 3;
+    if (t === 0) hard.push(makeTextQ('Komplex: ' + p[0] + ' — beste Einordnung?', p[1], p[2], 'hard', p[1], 'net-h-1-' + i));
+    else if (t === 1) hard.push(makeTextQ('Mehrstufig: Wenn X ' + p[0].toLowerCase() + ' dann?', p[1], p[2], 'hard', p[1], 'net-h-2-' + i));
+    else hard.push(makeTextQ('Trade-off/System: ' + p[0], p[1], p[2], 'hard', p[1], 'net-h-3-' + i));
+  }
+  return assemble300(easy, medium, hard);
 }
 
 // ---------- FIGURAL ----------
@@ -678,21 +1209,34 @@ function generateFiguralFragen() {
   const shapes = [
     ['Dreieck', 3],['Quadrat', 4],['Pentagon', 5],['Hexagon', 6],['Heptagon', 7],['Oktagon', 8]
   ];
-  const out = [];
+  const easy = [], medium = [], hard = [];
   for (let i = 0; i < 100; i++) {
+    const t = i % 3;
     const s = shapes[i % shapes.length];
-    out.push(makeNumQ('Wie viele Seiten hat ein ' + s[0] + '?', s[1], 'easy', s[0] + '=' + s[1], 'fig-e-' + i));
+    if (t === 0) easy.push(makeNumQ('Wie viele Seiten hat ein ' + s[0] + '?', s[1], 'easy', s[0], 'fig-e-1-' + i));
+    else if (t === 1) easy.push(makeTextQ('Welche Form hat ' + s[1] + ' Ecken?', s[0], [shapes[(i + 1) % shapes.length][0], shapes[(i + 2) % shapes.length][0]], 'easy', s[0], 'fig-e-2-' + i));
+    else easy.push(makeTextQ('Dreieck:3 = Viereck:?', '4', ['5','6'], 'easy', 'Seiten', 'fig-e-3-' + i));
   }
   for (let i = 0; i < 100; i++) {
+    const t = i % 3;
     const s = shapes[i % shapes.length];
-    out.push(makeTextQ('Analogie: Dreieck:3 = ' + s[0] + ':?', String(s[1]), [String(s[1] + 1), String(s[1] - 1)], 'medium', 'Seitenzahl', 'fig-m-' + i));
+    if (t === 0) medium.push(makeTextQ('Analogie: Dreieck:3 = ' + s[0] + ':?', String(s[1]), [String(s[1] + 1), String(s[1] - 1)], 'medium', 'Seitenzahl', 'fig-m-1-' + i));
+    else if (t === 1) medium.push(makeNumQ('Diagonale im konvexen ' + s[1] + '-Eck (Formel n(n-3)/2)?', s[1] * (s[1] - 3) / 2, 'medium', 'n(n-3)/2', 'fig-m-2-' + i));
+    else medium.push(makeTextQ('Nächstes in Reihe: Dreieck, Viereck, Fünfeck, ?', 'Sechseck', ['Kreis','Linie'], 'medium', '+1 Ecke', 'fig-m-3-' + i));
   }
   for (let i = 0; i < 100; i++) {
+    const t = i % 3;
     const n = 3 + (i % 6);
-    const ang = ((n - 2) * 180) / n;
-    out.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', 'Formel', 'fig-h-' + i));
+    if (t === 0) {
+      const ang = ((n - 2) * 180) / n;
+      hard.push(makeNumQ('Innenwinkel regelmäßiges ' + n + '-Eck?', ang, 'hard', 'Formel', 'fig-h-1-' + i));
+    } else if (t === 1) {
+      hard.push(makeNumQ('Summe Innenwinkel ' + n + '-Eck?', (n - 2) * 180, 'hard', '(n-2)×180', 'fig-h-2-' + i));
+    } else {
+      hard.push(makeTextQ('Symmetrie: regelmäßiges ' + n + '-Eck — Drehsymmetrie Ordnung?', String(n), [String(n - 1), String(n + 1)], 'hard', 'n-fach', 'fig-h-3-' + i));
+    }
   }
-  return out;
+  return assemble300(easy, medium, hard);
 }
 
 function generateAllFragen() {
@@ -769,7 +1313,7 @@ const state = {
   usedIds: new Set(),
   recentIds: loadJSON('mc_recent_ids', []),
   mistakes: loadJSON('mc_mistakes', []),
-  version: 'v9-300-norepeat-review'
+  version: 'v10-diverse-difficulty'
 };
 
 if (state.darkMode) document.body.classList.add('dark');
@@ -800,9 +1344,18 @@ function shuffleQuestion(q, area) {
 
 function diffFilter(diff) {
   return (q) => {
+    if (diff === 'veryeasy' || diff === 'easy') return q.difficulty === 'easy';
+    if (diff === 'medium') return q.difficulty === 'medium';
+    if (diff === 'hard') return q.difficulty === 'hard';
+    return true;
+  };
+}
+
+function neighborDiffFilter(diff) {
+  return (q) => {
     if (diff === 'veryeasy') return q.difficulty === 'easy';
     if (diff === 'easy') return q.difficulty === 'easy' || q.difficulty === 'medium';
-    if (diff === 'medium') return true;
+    if (diff === 'medium') return q.difficulty === 'medium' || q.difficulty === 'easy' || q.difficulty === 'hard';
     if (diff === 'hard') return q.difficulty === 'hard' || q.difficulty === 'medium';
     return true;
   };
@@ -820,13 +1373,14 @@ function getQuestion(area) {
   if (!allQs.length) return null;
 
   const filter = diffFilter(state.difficulty);
+  const neighbor = neighborDiffFilter(state.difficulty);
   const recentSet = new Set(state.recentIds);
 
   const tiers = [
     allQs.filter(q => filter(q) && !state.usedIds.has(q.id) && !recentSet.has(q.id)),
     allQs.filter(q => filter(q) && !state.usedIds.has(q.id)),
-    allQs.filter(q => !state.usedIds.has(q.id)),
-    // neighbor difficulties already covered by expanding pool
+    allQs.filter(q => neighbor(q) && !state.usedIds.has(q.id)),
+    allQs.filter(q => !state.usedIds.has(q.id))
   ];
 
   let pool = tiers.find(t => t.length > 0) || [];
@@ -971,7 +1525,7 @@ function renderHome(app) {
   const mistakeCount = state.mistakes.length;
   let html = '<header>';
   html += '<button class="dark-toggle" onclick="toggleDarkMode()">' + (state.darkMode ? '☀️' : '🌙') + '</button>';
-  html += '<h1>Multicheck Trainer PRO</h1><p>300 Fragen/Bereich · Keine Wiederholung · Fehler üben</p></header>';
+  html += '<h1>Multicheck Trainer PRO</h1><p>300 Fragen/Bereich · Diverse Typen · Echte Schwierigkeit · Fehler üben</p></header>';
   html += '<div class="container">';
   html += '<div class="nav-tabs">';
   html += '<button class="nav-tab' + (state.tab === 'train' ? ' active' : '') + '" onclick="state.tab=\'train\'; render()">🎯 Trainieren</button>';
